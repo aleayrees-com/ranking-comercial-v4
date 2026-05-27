@@ -111,7 +111,7 @@ const fixtureModules = (
 
 const LIVE_RANKING_ENDPOINT = '/api/ranking';
 const LIVE_REFRESH_INTERVAL_MS = 10_000;
-const TOASTY_AUDIO_SRC = '/easter-eggs/denner-toasty.mp3';
+const TOASTY_AUDIO_SRC = '/easter-eggs/denner-toasty-v2.mp3';
 const TOASTY_CONTROL_ENDPOINT = '/api/toasty';
 const TOASTY_IMAGE_SRC = '/easter-eggs/denner-toasty-v2.png';
 const TOASTY_INTERVAL_MS = 300_000;
@@ -233,6 +233,17 @@ export function App({
     }
   }, [getToastyAudio]);
 
+  const stopToastySound = useCallback(() => {
+    const audio = toastyAudioRef.current;
+
+    if (!audio) {
+      return;
+    }
+
+    audio.pause();
+    audio.currentTime = 0;
+  }, []);
+
   const triggerToasty = useCallback(
     ({ shouldPlaySound = true }: ToastyTriggerOptions = {}) => {
       setShowToasty(true);
@@ -247,10 +258,11 @@ export function App({
 
       hideToastyTimeoutRef.current = window.setTimeout(() => {
         setShowToasty(false);
+        stopToastySound();
         hideToastyTimeoutRef.current = undefined;
       }, TOASTY_VISIBLE_MS);
     },
-    [playToastySound],
+    [playToastySound, stopToastySound],
   );
 
   const triggerRemoteToasty = useCallback(async () => {
@@ -348,7 +360,9 @@ export function App({
   }, [periods, selectedPeriodKey]);
 
   useEffect(() => {
-    const intervalId = window.setInterval(triggerToasty, TOASTY_INTERVAL_MS);
+    const intervalId = window.setInterval(() => {
+      triggerToasty({ shouldPlaySound: false });
+    }, TOASTY_INTERVAL_MS);
 
     return () => {
       window.clearInterval(intervalId);
@@ -356,8 +370,10 @@ export function App({
       if (hideToastyTimeoutRef.current !== undefined) {
         window.clearTimeout(hideToastyTimeoutRef.current);
       }
+
+      stopToastySound();
     };
-  }, [triggerToasty]);
+  }, [stopToastySound, triggerToasty]);
 
   useEffect(() => {
     if (initialRows || initialError || isToastyControl) {

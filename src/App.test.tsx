@@ -94,6 +94,8 @@ const rows: readonly RawRankingRow[] = [
 function mockAudio(
   playMock = vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
 ) {
+  const instances: MockAudio[] = [];
+
   class MockAudio {
     currentTime = 0;
     pause = vi.fn();
@@ -104,12 +106,56 @@ function mockAudio(
 
     constructor(src = '') {
       this.src = src;
+      instances.push(this);
     }
   }
 
   vi.stubGlobal('Audio', MockAudio);
 
-  return playMock;
+  return {
+    instances,
+    playMock,
+  };
+}
+
+function mockLiveRankingAndToastySignal() {
+  const fetchMock = vi.fn((input: RequestInfo | URL) => {
+    const url = String(input);
+
+    if (url.includes('/api/ranking')) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ periodFilters: periods, rows }), {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          status: 200,
+        }),
+      );
+    }
+
+    if (url.includes('/api/toasty')) {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            id: 'remote-1',
+            triggeredAt: '2026-05-27T12:00:00.000Z',
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            status: 200,
+          },
+        ),
+      );
+    }
+
+    return Promise.reject(new Error(`URL inesperada: ${url}`));
+  });
+
+  vi.stubGlobal('fetch', fetchMock);
+
+  return fetchMock;
 }
 
 describe('App', () => {
@@ -415,9 +461,9 @@ describe('App', () => {
     expect(screen.queryByLabelText('Denner Toasty')).not.toBeInTheDocument();
   });
 
-  test('toca o som do Toasty quando o Denner aparece', async () => {
+  test('exibe Denner automaticamente sem tocar som', async () => {
     vi.useFakeTimers();
-    const playMock = mockAudio();
+    const { playMock } = mockAudio();
 
     render(<App initialRows={rows} initialPeriods={periods} />);
 
@@ -425,6 +471,29 @@ describe('App', () => {
       vi.advanceTimersByTime(300_000);
     });
 
+    expect(screen.getByLabelText('Denner Toasty')).toBeInTheDocument();
+    expect(playMock).not.toHaveBeenCalled();
+  });
+
+  test('toca o som do Toasty quando a TV recebe comando remoto', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-27T12:00:00.000Z'));
+    const { playMock } = mockAudio();
+    mockLiveRankingAndToastySignal();
+
+    render(<App />);
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(2_000);
+      await Promise.resolve();
+    });
+
+    expect(screen.getByLabelText('Denner Toasty')).toBeInTheDocument();
     expect(playMock).toHaveBeenCalledTimes(1);
   });
 
@@ -445,16 +514,23 @@ describe('App', () => {
 
   test('exibe botão para ativar som quando o navegador bloqueia autoplay', async () => {
     vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-27T12:00:00.000Z'));
     const playMock = vi
       .fn<() => Promise<void>>()
       .mockRejectedValueOnce(new Error('Autoplay bloqueado.'))
       .mockResolvedValue(undefined);
-    mockAudio(playMock);
+    const { instances } = mockAudio(playMock);
+    mockLiveRankingAndToastySignal();
 
-    render(<App initialRows={rows} initialPeriods={periods} />);
+    render(<App />);
 
     await act(async () => {
-      vi.advanceTimersByTime(300_000);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(2_000);
       await Promise.resolve();
     });
 
@@ -471,6 +547,7 @@ describe('App', () => {
       screen.queryByRole('button', { name: 'Ativar som do Toasty' }),
     ).not.toBeInTheDocument();
     expect(playMock).toHaveBeenCalledTimes(2);
+    expect(instances[0]?.src).toBe('/easter-eggs/denner-toasty-v2.mp3');
   });
 
   test('envia comando remoto do Denner pela tela de controle', async () => {
