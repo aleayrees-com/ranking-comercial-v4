@@ -998,6 +998,38 @@ tbody tr:last-child td {
   transform: rotate(-4deg);
 }
 
+.toasty-sound-enable {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 91;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 4px;
+  background: rgba(16, 16, 18, 0.92);
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease;
+}
+
+.toasty-sound-enable:hover {
+  border-color: rgba(255, 255, 255, 0.46);
+  background: var(--accent);
+  transform: translateY(-1px);
+}
+
+.toasty-sound-enable:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.9);
+  outline-offset: 3px;
+}
+
 .control-shell {
   --accent: #e50000;
   --muted: rgba(255, 255, 255, 0.68);

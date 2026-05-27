@@ -88,6 +88,9 @@ type RankingDataState =
 
 type RankingKind = 'closer' | 'sdr';
 type ToastyControlState = 'idle' | 'sending' | 'sent' | 'error';
+type ToastyTriggerOptions = {
+  readonly shouldPlaySound?: boolean;
+};
 
 type PodiumItemStyle = CSSProperties & {
   readonly '--podium-fill': string;
@@ -108,6 +111,7 @@ const fixtureModules = (
 
 const LIVE_RANKING_ENDPOINT = '/api/ranking';
 const LIVE_REFRESH_INTERVAL_MS = 10_000;
+const TOASTY_AUDIO_SRC = '/easter-eggs/denner-toasty.mp3';
 const TOASTY_CONTROL_ENDPOINT = '/api/toasty';
 const TOASTY_INTERVAL_MS = 300_000;
 const TOASTY_POLL_INTERVAL_MS = 2_000;
@@ -172,11 +176,13 @@ export function App({
   );
   const [expandedPanelKind, setExpandedPanelKind] =
     useState<RankingKind | null>(null);
+  const [isToastySoundBlocked, setIsToastySoundBlocked] = useState(false);
   const [showToasty, setShowToasty] = useState(false);
   const [toastyControlState, setToastyControlState] =
     useState<ToastyControlState>('idle');
   const hideToastyTimeoutRef = useRef<number | undefined>(undefined);
   const lastToastySignalIdRef = useRef('0');
+  const toastyAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const isToastyControl = useMemo(
     () =>
@@ -201,18 +207,50 @@ export function App({
     return buildRanking(dataState.rows, selectedPeriod);
   }, [dataState, selectedPeriod]);
 
-  const triggerToasty = useCallback(() => {
-    setShowToasty(true);
-
-    if (hideToastyTimeoutRef.current !== undefined) {
-      window.clearTimeout(hideToastyTimeoutRef.current);
+  const getToastyAudio = useCallback(() => {
+    if (!toastyAudioRef.current) {
+      const audio = new Audio(TOASTY_AUDIO_SRC);
+      audio.preload = 'auto';
+      audio.volume = 0.9;
+      toastyAudioRef.current = audio;
     }
 
-    hideToastyTimeoutRef.current = window.setTimeout(() => {
-      setShowToasty(false);
-      hideToastyTimeoutRef.current = undefined;
-    }, TOASTY_VISIBLE_MS);
+    return toastyAudioRef.current;
   }, []);
+
+  const playToastySound = useCallback(async () => {
+    const audio = getToastyAudio();
+
+    audio.pause();
+    audio.currentTime = 0;
+
+    try {
+      await audio.play();
+      setIsToastySoundBlocked(false);
+    } catch {
+      setIsToastySoundBlocked(true);
+    }
+  }, [getToastyAudio]);
+
+  const triggerToasty = useCallback(
+    ({ shouldPlaySound = true }: ToastyTriggerOptions = {}) => {
+      setShowToasty(true);
+
+      if (shouldPlaySound) {
+        void playToastySound();
+      }
+
+      if (hideToastyTimeoutRef.current !== undefined) {
+        window.clearTimeout(hideToastyTimeoutRef.current);
+      }
+
+      hideToastyTimeoutRef.current = window.setTimeout(() => {
+        setShowToasty(false);
+        hideToastyTimeoutRef.current = undefined;
+      }, TOASTY_VISIBLE_MS);
+    },
+    [playToastySound],
+  );
 
   const triggerRemoteToasty = useCallback(async () => {
     const url = new URL(TOASTY_CONTROL_ENDPOINT, window.location.href);
@@ -237,7 +275,7 @@ export function App({
       }
 
       setToastyControlState('sent');
-      triggerToasty();
+      triggerToasty({ shouldPlaySound: false });
     } catch {
       setToastyControlState('error');
     }
@@ -498,6 +536,16 @@ export function App({
       ) : null}
 
       {showToasty ? <DennerToasty /> : null}
+      {isToastySoundBlocked ? (
+        <button
+          aria-label="Ativar som do Toasty"
+          className="toasty-sound-enable"
+          onClick={() => void playToastySound()}
+          type="button"
+        >
+          Ativar som
+        </button>
+      ) : null}
     </main>
   );
 }
@@ -794,9 +842,9 @@ function DennerToasty() {
     <aside className="toasty-easter-egg" aria-label="Denner Toasty">
       <img
         alt="Denner"
-        height="365"
+        height="933"
         src="/easter-eggs/denner-toasty.png"
-        width="383"
+        width="700"
       />
       <strong>TOASTY!</strong>
     </aside>

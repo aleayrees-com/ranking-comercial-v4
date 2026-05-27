@@ -1,6 +1,13 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { afterEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { App } from './App.js';
 import type { PeriodFilter, RawRankingRow } from './domain/ranking.js';
 
@@ -84,7 +91,32 @@ const rows: readonly RawRankingRow[] = [
   },
 ];
 
+function mockAudio(
+  playMock = vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+) {
+  class MockAudio {
+    currentTime = 0;
+    pause = vi.fn();
+    play = playMock;
+    preload = '';
+    readonly src: string;
+    volume = 1;
+
+    constructor(src = '') {
+      this.src = src;
+    }
+  }
+
+  vi.stubGlobal('Audio', MockAudio);
+
+  return playMock;
+}
+
 describe('App', () => {
+  beforeEach(() => {
+    mockAudio();
+  });
+
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
@@ -381,6 +413,49 @@ describe('App', () => {
     });
 
     expect(screen.queryByLabelText('Denner Toasty')).not.toBeInTheDocument();
+  });
+
+  test('toca o som do Toasty quando o Denner aparece', async () => {
+    vi.useFakeTimers();
+    const playMock = mockAudio();
+
+    render(<App initialRows={rows} initialPeriods={periods} />);
+
+    await act(async () => {
+      vi.advanceTimersByTime(300_000);
+    });
+
+    expect(playMock).toHaveBeenCalledTimes(1);
+  });
+
+  test('exibe botão para ativar som quando o navegador bloqueia autoplay', async () => {
+    vi.useFakeTimers();
+    const playMock = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(new Error('Autoplay bloqueado.'))
+      .mockResolvedValue(undefined);
+    mockAudio(playMock);
+
+    render(<App initialRows={rows} initialPeriods={periods} />);
+
+    await act(async () => {
+      vi.advanceTimersByTime(300_000);
+      await Promise.resolve();
+    });
+
+    const enableSoundButton = screen.getByRole('button', {
+      name: 'Ativar som do Toasty',
+    });
+
+    await act(async () => {
+      fireEvent.click(enableSoundButton);
+      await Promise.resolve();
+    });
+
+    expect(
+      screen.queryByRole('button', { name: 'Ativar som do Toasty' }),
+    ).not.toBeInTheDocument();
+    expect(playMock).toHaveBeenCalledTimes(2);
   });
 
   test('envia comando remoto do Denner pela tela de controle', async () => {
