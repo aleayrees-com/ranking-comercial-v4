@@ -428,6 +428,21 @@ describe('App', () => {
     expect(playMock).toHaveBeenCalledTimes(1);
   });
 
+  test('usa imagem versionada do Denner para evitar cache antigo', async () => {
+    vi.useFakeTimers();
+
+    render(<App initialRows={rows} initialPeriods={periods} />);
+
+    await act(async () => {
+      vi.advanceTimersByTime(300_000);
+    });
+
+    expect(screen.getByAltText('Denner')).toHaveAttribute(
+      'src',
+      '/easter-eggs/denner-toasty-v2.png',
+    );
+  });
+
   test('exibe botão para ativar som quando o navegador bloqueia autoplay', async () => {
     vi.useFakeTimers();
     const playMock = vi

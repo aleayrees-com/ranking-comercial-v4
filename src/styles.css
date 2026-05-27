@@ -967,12 +967,12 @@ tbody tr:last-child td {
 
 .toasty-easter-egg {
   position: fixed;
-  right: 0;
-  bottom: 42px;
+  right: clamp(18px, 2.4vw, 48px);
+  bottom: clamp(72px, 7dvh, 112px);
   z-index: 90;
   display: grid;
   justify-items: center;
-  width: clamp(180px, 18vw, 340px);
+  width: clamp(160px, 15vw, 300px);
   pointer-events: none;
   animation: toasty-pop 2800ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
