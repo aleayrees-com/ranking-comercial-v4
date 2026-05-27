@@ -974,13 +974,14 @@ tbody tr:last-child td {
   justify-items: center;
   width: clamp(160px, 15vw, 300px);
   pointer-events: none;
-  animation: toasty-pop 2800ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: toasty-pop 5200ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .toasty-easter-egg--over-expanded {
-  right: clamp(18px, 2vw, 40px);
-  bottom: clamp(36px, 4dvh, 76px);
-  width: clamp(190px, 16vw, 320px);
+  right: clamp(18px, 3vw, 58px);
+  bottom: clamp(28px, 5dvh, 72px);
+  width: clamp(220px, 19vw, 360px);
+  animation-name: toasty-pop-contained;
 }
 
 .toasty-easter-egg img {
@@ -1155,6 +1156,24 @@ tbody tr:last-child td {
   }
 }
 
+@keyframes toasty-pop-contained {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.92) rotate(3deg);
+  }
+
+  10%,
+  84% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98) rotate(2deg);
+  }
+}
+
 @media (min-width: 640px) {
   .app-shell {
     padding: 28px;
@@ -1297,7 +1316,7 @@ tbody tr:last-child td {
     min-height: 0;
     gap: 12px;
     margin-bottom: 16px;
-    padding-top: clamp(82px, 9dvh, 112px);
+    padding-top: clamp(118px, 13dvh, 164px);
     overflow: visible;
   }
 

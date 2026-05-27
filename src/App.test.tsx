@@ -471,7 +471,7 @@ describe('App', () => {
     expect(screen.getByLabelText('Denner Toasty')).toBeInTheDocument();
 
     await act(async () => {
-      vi.advanceTimersByTime(2_800);
+      vi.advanceTimersByTime(5_200);
     });
 
     expect(screen.queryByLabelText('Denner Toasty')).not.toBeInTheDocument();
