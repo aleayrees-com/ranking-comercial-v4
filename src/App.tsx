@@ -113,7 +113,7 @@ const LIVE_RANKING_ENDPOINT = '/api/ranking';
 const LIVE_REFRESH_INTERVAL_MS = 10_000;
 const TOASTY_AUDIO_SRC = '/easter-eggs/denner-toasty-v2.mp3';
 const TOASTY_CONTROL_ENDPOINT = '/api/toasty';
-const TOASTY_IMAGE_SRC = '/easter-eggs/denner-toasty-v4.webp';
+const TOASTY_IMAGE_SRC = '/easter-eggs/denner-toasty.png';
 const TOASTY_INTERVAL_MS = 300_000;
 const TOASTY_POLL_INTERVAL_MS = 2_000;
 const TOASTY_SIGNAL_MAX_AGE_MS = 120_000;
@@ -182,7 +182,7 @@ export function App({
   const [toastyControlState, setToastyControlState] =
     useState<ToastyControlState>('idle');
   const hideToastyTimeoutRef = useRef<number | undefined>(undefined);
-  const lastToastySignalIdRef = useRef('0');
+  const lastToastySignalIdRef = useRef<string | null>(null);
   const toastyAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const isToastyControl = useMemo(
@@ -395,6 +395,11 @@ export function App({
           }
 
           if (lastToastySignalIdRef.current === signal.id) {
+            return;
+          }
+
+          if (lastToastySignalIdRef.current === null) {
+            lastToastySignalIdRef.current = signal.id;
             return;
           }
 

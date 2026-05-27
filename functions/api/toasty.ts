@@ -28,16 +28,33 @@ const TOASTY_CACHE_URL = 'https://ranking-comercial-v4.local/toasty-state';
 
 let memorySignal: ToastySignal = DEFAULT_SIGNAL;
 
-export async function onRequestGet({ env }: ToastyContext): Promise<Response> {
-  return jsonResponse(await readSignal(env));
-}
-
-export async function onRequestPost({
+export async function onRequestGet({
   env,
   request,
 }: ToastyContext): Promise<Response> {
+  const signal = await readSignal(env);
+
+  if (new URL(request.url).searchParams.get('health') === '1') {
+    return jsonResponse({
+      hasKv: getKv(env) !== null,
+      signal,
+    });
+  }
+
+  return jsonResponse(signal);
+}
+
+export async function onRequestPost(context: ToastyContext): Promise<Response> {
+  const { env, request } = context;
+
   if (!isAuthorized(request, env)) {
     return jsonResponse({ message: 'Comando não autorizado.' }, 401);
+  }
+
+  if (new URL(request.url).searchParams.get('reset') === '1') {
+    await writeSignal(DEFAULT_SIGNAL, env);
+
+    return jsonResponse(DEFAULT_SIGNAL);
   }
 
   const signal: ToastySignal = {
@@ -48,6 +65,10 @@ export async function onRequestPost({
   await writeSignal(signal, env);
 
   return jsonResponse(signal, 201);
+}
+
+function getKv(env?: ToastyEnvironment): ToastyKvNamespace | null {
+  return env?.TOASTY_KV ?? env?.RANKING_TOASTY_KV ?? null;
 }
 
 function isAuthorized(request: Request, env?: ToastyEnvironment): boolean {
@@ -94,7 +115,7 @@ async function writeSignal(
 async function readKvSignal(
   env?: ToastyEnvironment,
 ): Promise<ToastySignal | null> {
-  const kv = env?.TOASTY_KV ?? env?.RANKING_TOASTY_KV;
+  const kv = getKv(env);
 
   if (!kv) {
     return null;
@@ -109,7 +130,7 @@ async function writeKvSignal(
   signal: ToastySignal,
   env?: ToastyEnvironment,
 ): Promise<void> {
-  const kv = env?.TOASTY_KV ?? env?.RANKING_TOASTY_KV;
+  const kv = getKv(env);
 
   if (!kv) {
     return;

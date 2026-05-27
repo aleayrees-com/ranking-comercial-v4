@@ -118,9 +118,24 @@ function mockAudio(
   };
 }
 
+interface MockToastySignal {
+  readonly id: string;
+  readonly triggeredAt: string | null;
+}
+
 function mockLiveRankingAndToastySignal(
-  triggeredAt = '2026-05-27T12:00:00.000Z',
+  nextSignals: readonly MockToastySignal[] = [
+    {
+      id: '0',
+      triggeredAt: null,
+    },
+    {
+      id: 'remote-1',
+      triggeredAt: '2026-05-27T12:00:00.000Z',
+    },
+  ],
 ) {
+  let toastyCallIndex = 0;
   const fetchMock = vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
 
@@ -136,19 +151,18 @@ function mockLiveRankingAndToastySignal(
     }
 
     if (url.includes('/api/toasty')) {
+      const signal =
+        nextSignals[Math.min(toastyCallIndex, nextSignals.length - 1)] ??
+        nextSignals[0];
+      toastyCallIndex += 1;
+
       return Promise.resolve(
-        new Response(
-          JSON.stringify({
-            id: 'remote-1',
-            triggeredAt,
-          }),
-          {
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            status: 200,
+        new Response(JSON.stringify(signal), {
+          headers: {
+            'Content-Type': 'application/json',
           },
-        ),
+          status: 200,
+        }),
       );
     }
 
@@ -495,6 +509,14 @@ describe('App', () => {
       await Promise.resolve();
     });
 
+    expect(screen.queryByLabelText('Denner Toasty')).not.toBeInTheDocument();
+    expect(playMock).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(2_000);
+      await Promise.resolve();
+    });
+
     expect(screen.getByLabelText('Denner Toasty')).toBeInTheDocument();
     expect(playMock).toHaveBeenCalledTimes(1);
   });
@@ -503,7 +525,16 @@ describe('App', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-27T12:01:30.000Z'));
     const { playMock } = mockAudio();
-    mockLiveRankingAndToastySignal('2026-05-27T12:00:00.000Z');
+    mockLiveRankingAndToastySignal([
+      {
+        id: '0',
+        triggeredAt: null,
+      },
+      {
+        id: 'remote-1',
+        triggeredAt: '2026-05-27T12:00:00.000Z',
+      },
+    ]);
 
     render(<App />);
 
@@ -517,11 +548,18 @@ describe('App', () => {
       await Promise.resolve();
     });
 
+    expect(screen.queryByLabelText('Denner Toasty')).not.toBeInTheDocument();
+
+    await act(async () => {
+      vi.advanceTimersByTime(2_000);
+      await Promise.resolve();
+    });
+
     expect(screen.getByLabelText('Denner Toasty')).toBeInTheDocument();
     expect(playMock).toHaveBeenCalledTimes(1);
   });
 
-  test('usa imagem versionada do Denner para evitar cache antigo', async () => {
+  test('usa o PNG transparente do Denner no caminho antigo', async () => {
     vi.useFakeTimers();
 
     render(<App initialRows={rows} initialPeriods={periods} />);
@@ -532,7 +570,7 @@ describe('App', () => {
 
     expect(screen.getByAltText('Denner')).toHaveAttribute(
       'src',
-      '/easter-eggs/denner-toasty-v4.webp',
+      '/easter-eggs/denner-toasty.png',
     );
   });
 
@@ -550,6 +588,11 @@ describe('App', () => {
 
     await act(async () => {
       await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(2_000);
       await Promise.resolve();
     });
 

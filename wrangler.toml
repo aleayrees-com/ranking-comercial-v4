@@ -5,3 +5,7 @@ compatibility_date = "2026-05-27"
 [[kv_namespaces]]
 binding = "TOASTY_KV"
 id = "1bb6590753e14805aaaffb00901bdda5"
+
+[[env.production.kv_namespaces]]
+binding = "TOASTY_KV"
+id = "1bb6590753e14805aaaffb00901bdda5"

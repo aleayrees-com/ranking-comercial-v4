@@ -32,6 +32,55 @@ describe('/api/toasty', () => {
     expect(getPayload.id).toBe(postPayload.id);
   });
 
+  test('informa health do binding KV sem disparar comando', async () => {
+    const env = {
+      TOASTY_KV: createKv(),
+    };
+    const request = new Request(
+      'https://rank.v4alfradique.com/api/toasty?health=1',
+    );
+
+    const response = await onRequestGet({ env, request });
+    const payload = (await response.json()) as {
+      readonly hasKv: boolean;
+      readonly signal: { readonly id: string };
+    };
+
+    expect(payload.hasKv).toBe(true);
+    expect(typeof payload.signal.id).toBe('string');
+  });
+
+  test('reseta o último comando remoto sem criar novo disparo', async () => {
+    const env = {
+      TOASTY_KV: createKv(),
+    };
+    const postRequest = new Request(
+      'https://rank.v4alfradique.com/api/toasty',
+      {
+        method: 'POST',
+      },
+    );
+    const resetRequest = new Request(
+      'https://rank.v4alfradique.com/api/toasty?reset=1',
+      {
+        method: 'POST',
+      },
+    );
+
+    await onRequestPost({ env, request: postRequest });
+    const resetResponse = await onRequestPost({ env, request: resetRequest });
+    const resetPayload = (await resetResponse.json()) as {
+      readonly id: string;
+      readonly triggeredAt: string | null;
+    };
+
+    expect(resetResponse.status).toBe(200);
+    expect(resetPayload).toEqual({
+      id: '0',
+      triggeredAt: null,
+    });
+  });
+
   test('exige chave quando o ambiente define TOASTY_CONTROL_KEY', async () => {
     const env = {
       TOASTY_CONTROL_KEY: 'segredo',
