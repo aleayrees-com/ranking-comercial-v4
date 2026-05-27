@@ -1041,6 +1041,76 @@ tbody tr:last-child td {
   }
 }
 
+@media (orientation: landscape) and (min-width: 480px) and (min-height: 320px) {
+  .podium-list,
+  .ranking-panel.is-expanded .podium-list {
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.18fr) minmax(0, 0.92fr);
+    align-items: end;
+  }
+
+  .podium-item[data-position='1'] {
+    order: 2;
+  }
+
+  .podium-item[data-position='2'] {
+    order: 1;
+  }
+
+  .podium-item[data-position='3'] {
+    order: 3;
+  }
+
+  .ranking-panel.is-expanded {
+    padding: 18px;
+  }
+
+  .ranking-panel.is-expanded .panel-heading {
+    padding-bottom: 10px;
+  }
+
+  .ranking-panel.is-expanded .podium-list {
+    min-height: 0;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-top: 34px;
+  }
+
+  .ranking-panel.is-expanded .podium-item {
+    --podium-avatar-size: 96px;
+    --podium-stage-min: clamp(220px, 40dvh, 420px);
+    --podium-stage-offset: 56px;
+    --podium-stage-padding-top: 92px;
+  }
+
+  .ranking-panel.is-expanded .podium-item[data-position='1'] {
+    --podium-avatar-size: 132px;
+    --podium-stage-min: clamp(280px, 52dvh, 560px);
+    --podium-stage-offset: 76px;
+    --podium-stage-padding-top: 124px;
+  }
+
+  .ranking-panel.is-expanded .podium-name {
+    font-size: 1.45rem;
+  }
+
+  .ranking-panel.is-expanded .podium-item[data-position='1'] .podium-name {
+    font-size: 2.35rem;
+  }
+
+  .ranking-panel.is-expanded .podium-item strong {
+    font-size: 1.8rem;
+  }
+
+  .ranking-panel.is-expanded .podium-item[data-position='1'] strong {
+    font-size: 3.1rem;
+  }
+
+  .ranking-panel.is-expanded .table-scroll {
+    max-height: 28dvh;
+    overflow: auto;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
