@@ -113,7 +113,7 @@ const LIVE_RANKING_ENDPOINT = '/api/ranking';
 const LIVE_REFRESH_INTERVAL_MS = 10_000;
 const TOASTY_AUDIO_SRC = '/easter-eggs/denner-toasty-v2.mp3';
 const TOASTY_CONTROL_ENDPOINT = '/api/toasty';
-const TOASTY_IMAGE_SRC = '/easter-eggs/denner-toasty-v2.png';
+const TOASTY_IMAGE_SRC = '/easter-eggs/denner-toasty-v3.webp';
 const TOASTY_INTERVAL_MS = 300_000;
 const TOASTY_POLL_INTERVAL_MS = 2_000;
 const TOASTY_SIGNAL_MAX_AGE_MS = 30_000;
@@ -199,6 +199,11 @@ export function App({
     periods.find((period) => getPeriodKey(period) === selectedPeriodKey) ??
     periods[0] ??
     DEFAULT_PERIODS[0];
+
+  useEffect(() => {
+    const image = new Image();
+    image.src = TOASTY_IMAGE_SRC;
+  }, []);
 
   const ranking = useMemo<RankingResult | null>(() => {
     if (dataState.status !== 'ready') {
@@ -857,7 +862,7 @@ function PodiumItem({
 function DennerToasty() {
   return (
     <aside className="toasty-easter-egg" aria-label="Denner Toasty">
-      <img alt="Denner" height="933" src={TOASTY_IMAGE_SRC} width="700" />
+      <img alt="Denner" height="693" src={TOASTY_IMAGE_SRC} width="520" />
       <strong>TOASTY!</strong>
     </aside>
   );
