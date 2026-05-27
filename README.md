@@ -1,0 +1,58 @@
+# Ranking de Closer e SDR
+
+Dashboard local em Vite + React + TypeScript para rankear closers por receita/logos e SDRs por reunioes realizadas.
+
+## O que e
+
+A feature calcula dois rankings por periodo:
+
+- Closers: ordenados por receita realizada, com logos como desempate.
+- SDR/pre-vendas: ordenados por reunioes realizadas.
+
+A v1 usa uma fixture local derivada da planilha operacional. Nao ha chamada para API externa nesta etapa.
+
+## Como rodar
+
+Use os scripts existentes no `package.json`:
+
+```bash
+npm install
+npm run dev
+npm test
+npm run build
+```
+
+O `npm run dev` inicia o Vite em `127.0.0.1`; o terminal informa a porta disponivel.
+
+## Fonte dos dados
+
+- Planilha: `Cópia de Controle de Resultados | Alfradique & Co RJ`
+- Abas mapeadas: `LEAD BROKER`, `CDR MAIO/26`
+- GID: `839739381`
+- Timezone: `America/Sao_Paulo`
+- URL: `https://docs.google.com/spreadsheets/d/1iVyJSFP6n_We9TMxFU0xHtcXnAFl6U-0Sgh3StCiqkc/edit?gid=839739381#gid=839739381`
+
+A fixture local fica em `src/data/rankingFixture.ts` e preserva a rastreabilidade da origem. O contrato esperado esta em `docs/source-contract.md`.
+
+## Contrato e regras
+
+- Contrato da fonte local: `docs/source-contract.md`
+- Regras de ranking: `docs/rules-ranking-de-closer-e-sdr.md`
+- Qualidade de dados: `docs/data-quality.md`
+- Nota de origem: `docs/01-ideas/Ranking de Closer e SDR.md`
+- PDR: `docs/pdr-ranking-de-closer-e-sdr.md`
+- PRD: `docs/prd-ranking-de-closer-e-sdr.md`
+- Plano tecnico: `docs/plano-tecnico-ranking-de-closer-e-sdr.md`
+- Checklist de validacao: `docs/validation-ranking-de-closer-e-sdr.md`
+- Revisao QA: `docs/revisao-qa-ranking-de-closer-e-sdr.md`
+- Decisao tecnica: `docs/08-decisions/0001-fonte-local-ranking-closer-sdr.md`
+
+## Criterios cobertos
+
+- Normalizacao local de moeda BRL, numeros e `memberId`.
+- Ranking de closers com receita total e logos totais.
+- Ranking de SDR/pre-vendas com reunioes realizadas.
+- Filtro por periodo.
+- Agregacao por integrante no mesmo periodo/papel.
+- Rejeicao de linhas inconsistentes sem quebrar linhas validas.
+- Rastreabilidade com a planilha do Miguel por fonte local e contrato documentado.

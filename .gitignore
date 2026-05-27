@@ -1,0 +1,9 @@
+node_modules
+dist
+coverage
+.playwright-mcp
+.vite-*.log
+ranking-*.png
+.env
+.env.*
+!.env.example
