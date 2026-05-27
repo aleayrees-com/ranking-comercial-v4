@@ -120,6 +120,11 @@ const TOASTY_INITIAL_SIGNAL_MAX_AGE_MS = 10_000;
 const TOASTY_POLL_INTERVAL_MS = 2_000;
 const TOASTY_SIGNAL_MAX_AGE_MS = 120_000;
 const TOASTY_VISIBLE_MS = 5_200;
+const PODIUM_HEIGHT_BY_POSITION = {
+  1: 304,
+  2: 208,
+  3: 170,
+} as const;
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
@@ -1349,8 +1354,10 @@ function getPodiumItemStyle(
         ? 1
         : 0.12;
 
-  const extraWinnerHeight = entry.position === 1 ? 20 : 0;
-  const height = Math.round(132 + share * 164 + extraWinnerHeight);
+  const height =
+    PODIUM_HEIGHT_BY_POSITION[
+      entry.position as keyof typeof PODIUM_HEIGHT_BY_POSITION
+    ] ?? PODIUM_HEIGHT_BY_POSITION[3];
   const fill = Math.round(18 + share * 76);
 
   return {

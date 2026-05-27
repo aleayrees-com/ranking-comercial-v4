@@ -436,12 +436,15 @@ describe('App', () => {
     ).not.toBeInTheDocument();
   });
 
-  test('destaca o primeiro lugar do pódio conforme a diferença da métrica', () => {
+  test('mantém altura visual do pódio por posição', () => {
     render(<App initialRows={rows} initialPeriods={periods} />);
 
     const closerPodium = screen.getByLabelText('Top 3 Closers');
+    const sdrPodium = screen.getByLabelText('Top 3 SDR / Pré-vendas');
     const firstPlace = within(closerPodium).getByTestId('podium-closer-1');
     const secondPlace = within(closerPodium).getByTestId('podium-closer-2');
+    const thirdPlace = within(closerPodium).getByTestId('podium-closer-3');
+    const secondSdrPlace = within(sdrPodium).getByTestId('podium-sdr-2');
 
     const firstHeight = Number.parseInt(
       firstPlace.style.getPropertyValue('--podium-height'),
@@ -451,8 +454,16 @@ describe('App', () => {
       secondPlace.style.getPropertyValue('--podium-height'),
       10,
     );
+    const thirdHeight = Number.parseInt(
+      thirdPlace.style.getPropertyValue('--podium-height'),
+      10,
+    );
 
     expect(firstHeight).toBeGreaterThan(secondHeight + 80);
+    expect(secondHeight).toBeGreaterThan(thirdHeight);
+    expect(secondSdrPlace.style.getPropertyValue('--podium-height')).toBe(
+      secondPlace.style.getPropertyValue('--podium-height'),
+    );
     expect(firstPlace.querySelector('.lucide-crown')).not.toBeNull();
     expect(firstPlace.querySelector('.podium-v4-crown')).not.toBeNull();
     expect(secondPlace.querySelector('.podium-v4-crown')).toBeNull();
