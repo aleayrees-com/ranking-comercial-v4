@@ -508,7 +508,7 @@ describe('App', () => {
 
     expect(screen.getByAltText('Denner')).toHaveAttribute(
       'src',
-      '/easter-eggs/denner-toasty-v3.webp',
+      '/easter-eggs/denner-toasty-v4.webp',
     );
   });
 
