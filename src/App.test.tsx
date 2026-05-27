@@ -646,7 +646,7 @@ describe('App', () => {
     expect(screen.queryByLabelText('Denner Toasty')).not.toBeInTheDocument();
   });
 
-  test('usa o PNG transparente do Denner no caminho antigo', async () => {
+  test('usa o PNG transparente do Denner com caminho versionado', async () => {
     vi.useFakeTimers();
 
     render(<App initialRows={rows} initialPeriods={periods} />);
@@ -657,7 +657,7 @@ describe('App', () => {
 
     expect(screen.getByAltText('Denner')).toHaveAttribute(
       'src',
-      '/easter-eggs/denner-toasty.png',
+      '/easter-eggs/denner-toasty-wide-eyed.png',
     );
   });
 

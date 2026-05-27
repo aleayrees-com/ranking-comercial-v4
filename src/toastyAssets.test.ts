@@ -24,7 +24,10 @@ const pngHasAlphaChannel = (bytes: Uint8Array): boolean => {
 
 describe('Toasty assets', () => {
   test('uses a transparent Denner cutout', () => {
-    const assetPath = resolve(repoRoot, 'public/easter-eggs/denner-toasty.png');
+    const assetPath = resolve(
+      repoRoot,
+      'public/easter-eggs/denner-toasty-wide-eyed.png',
+    );
     const bytes = readFileSync(assetPath);
 
     expect(pngHasAlphaChannel(bytes)).toBe(true);

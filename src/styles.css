@@ -545,6 +545,9 @@ button:focus-visible {
   --podium-metal: #d9e0ea;
   --podium-metal-dark: #6f7783;
   --podium-metal-soft: rgba(217, 224, 234, 0.24);
+  --podium-stage-min: max(calc(var(--podium-height, 156px) + 72px), 284px);
+  --podium-stage-offset: 66px;
+  --podium-stage-padding-top: 96px;
   --podium-stage-bg: linear-gradient(
     180deg,
     #87909b 0%,
@@ -796,6 +799,14 @@ button:focus-visible {
   min-height: calc(var(--podium-stage-min) + var(--podium-stage-offset));
 }
 
+.ranking-panel.is-expanded .podium-item[data-position='2'] {
+  --podium-avatar-size: 150px;
+  --podium-stage-min: clamp(430px, calc(var(--podium-height) + 30vh), 720px);
+  --podium-stage-offset: 98px;
+  --podium-stage-padding-top: 150px;
+  min-height: calc(var(--podium-stage-min) + var(--podium-stage-offset));
+}
+
 .ranking-panel.is-expanded .podium-name {
   font-size: 1.35rem;
 }
@@ -984,9 +995,10 @@ tbody tr:last-child td {
 }
 
 .toasty-easter-egg--over-expanded {
-  top: 28vh;
+  top: auto;
   right: 72px;
-  bottom: auto;
+  bottom: 64px;
+  bottom: clamp(56px, 8vh, 96px);
   width: 230px;
   width: clamp(220px, 19vw, 340px);
   right: clamp(56px, 7vw, 128px);
@@ -1339,6 +1351,13 @@ tbody tr:last-child td {
     --podium-stage-min: clamp(270px, 46vh, 500px);
     --podium-stage-offset: clamp(66px, 7.5vh, 92px);
     --podium-stage-padding-top: calc(var(--podium-avatar-size) * 0.9);
+  }
+
+  .ranking-panel.is-expanded .podium-item[data-position='2'] {
+    --podium-avatar-size: clamp(88px, 7.8vw, 122px);
+    --podium-stage-min: clamp(242px, 40vh, 420px);
+    --podium-stage-offset: clamp(54px, 6.4vh, 74px);
+    --podium-stage-padding-top: calc(var(--podium-avatar-size) * 0.88);
   }
 
   .ranking-panel.is-expanded .podium-name {
