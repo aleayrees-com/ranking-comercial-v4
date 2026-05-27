@@ -48,6 +48,13 @@ interface RankingFixtureModule {
   readonly sourceSpreadsheet?: unknown;
 }
 
+interface RankingApiPayload {
+  readonly rows?: unknown;
+  readonly periodFilters?: unknown;
+  readonly periods?: unknown;
+  readonly sourceSpreadsheet?: unknown;
+}
+
 interface ImportMetaWithGlob extends ImportMeta {
   glob<TModule>(pattern: string): Record<string, () => Promise<TModule>>;
 }
@@ -90,6 +97,9 @@ const DEFAULT_PERIODS: readonly PeriodFilter[] = [
 const fixtureModules = (
   import.meta as ImportMetaWithGlob
 ).glob<RankingFixtureModule>('./data/rankingFixture.ts');
+
+const LIVE_RANKING_ENDPOINT = '/api/ranking';
+const LIVE_REFRESH_INTERVAL_MS = 30_000;
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
@@ -170,7 +180,7 @@ export function App({
 
     let isActive = true;
 
-    loadRankingFixture()
+    loadRankingData()
       .then((nextState) => {
         if (isActive) {
           setDataState(nextState);
@@ -190,8 +200,21 @@ export function App({
         });
       });
 
+    const intervalId = window.setInterval(() => {
+      loadLiveRankingData()
+        .then((nextState) => {
+          if (isActive) {
+            setDataState(nextState);
+          }
+        })
+        .catch(() => {
+          // Keep the last known good ranking on transient spreadsheet errors.
+        });
+    }, LIVE_REFRESH_INTERVAL_MS);
+
     return () => {
       isActive = false;
+      window.clearInterval(intervalId);
     };
   }, [initialError, initialRows]);
 
@@ -736,6 +759,37 @@ async function loadRankingFixture(): Promise<RankingDataState> {
     periods,
     rows,
     sourceInfo: extractSourceInfo(module.sourceSpreadsheet),
+  });
+}
+
+async function loadRankingData(): Promise<RankingDataState> {
+  try {
+    return await loadLiveRankingData();
+  } catch {
+    return loadRankingFixture();
+  }
+}
+
+async function loadLiveRankingData(): Promise<RankingDataState> {
+  const response = await fetch(
+    new URL(LIVE_RANKING_ENDPOINT, window.location.href),
+    {
+      cache: 'no-store',
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`API de ranking retornou ${response.status}.`);
+  }
+
+  const payload = (await response.json()) as RankingApiPayload;
+  const rows = extractRows(payload);
+  const periods = extractPeriods(payload);
+
+  return createReadyState({
+    periods,
+    rows,
+    sourceInfo: extractSourceInfo(payload.sourceSpreadsheet),
   });
 }
 

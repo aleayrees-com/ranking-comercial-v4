@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { App } from './App.js';
 import type { PeriodFilter, RawRankingRow } from './domain/ranking.js';
 
@@ -85,6 +85,10 @@ const rows: readonly RawRankingRow[] = [
 ];
 
 describe('App', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   test('referencia fotos apenas dentro dos rankings de closers e SDRs', () => {
     const { container } = render(
       <App
@@ -193,6 +197,53 @@ describe('App', () => {
     render(<App />);
 
     expect(screen.getByText('Carregando ranking')).toBeInTheDocument();
+  });
+
+  test('carrega dados da API em tempo real antes da fixture local', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            periods: [
+              {
+                label: 'Maio/2026',
+                start: '2026-05-01',
+                end: '2026-05-31',
+              },
+            ],
+            rows: [
+              {
+                period: '2026-05-31',
+                role: 'closer',
+                memberId: 'lucas-macedo',
+                memberName: 'Lucas Macedo',
+                revenue: 42000,
+                logos: 2,
+                sourceChannel: 'Lead Broker',
+              },
+            ],
+            sourceSpreadsheet: {
+              title: 'Planilha em tempo real',
+              sheet: 'CDR MAIO/26',
+            },
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            status: 200,
+          },
+        ),
+      ),
+    );
+
+    render(<App />);
+
+    expect(
+      await screen.findByText(/Planilha em tempo real/),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText('R$ 42.000')).not.toHaveLength(0);
   });
 
   test('carrega somente maio na fonte local principal', async () => {
