@@ -2,6 +2,87 @@ import { describe, expect, test } from 'vitest';
 import { parseGoogleSheetRankingCsv } from './googleSheetSource.js';
 
 describe('parseGoogleSheetRankingCsv', () => {
+  test('normalizes the CDR Maio operational summary into ranking rows', () => {
+    const csv = createCsv([
+      row({
+        169: 'META',
+        170: 'Lucas Vieira',
+        171: 'Wilson Junior',
+        172: 'Macedo Lucas Rodrigues',
+        180: 'Total Time',
+        182: 'META',
+        183: 'Carlos Guerra',
+        184: 'Macedo Lucas Rodrigues',
+        185: 'Miguel de Oliveira Guimarães Vieira',
+        187: 'TOTAL',
+      }),
+      row({
+        169: 'REALIZADO',
+        170: '15',
+        171: '19',
+        172: '1',
+        180: '34',
+        182: 'REALIZADO',
+        183: 'R$ 24.728,00',
+        184: 'R$ 126.699',
+        185: 'R$ 17.984',
+        187: 'R$ 169.410,52',
+      }),
+      row({
+        182: 'Vendas',
+        183: '1',
+        184: '7',
+        185: '1',
+        187: '9',
+      }),
+    ]);
+
+    const result = parseGoogleSheetRankingCsv(csv);
+
+    expect(result.sourceSpreadsheet.sheet).toBe('CDR MAIO/26');
+    expect(result.rows).toEqual([
+      expect.objectContaining({
+        role: 'closer',
+        memberId: 'carlos-guerra',
+        memberName: 'Carlos Guerra',
+        revenue: 24728,
+        logos: 1,
+      }),
+      expect.objectContaining({
+        role: 'closer',
+        memberId: 'lucas-macedo',
+        memberName: 'Lucas Macedo',
+        revenue: 126699,
+        logos: 7,
+      }),
+      expect.objectContaining({
+        role: 'closer',
+        memberId: 'miguel-de-oliveira-guimaraes-vieira',
+        memberName: 'Miguel de Oliveira Guimarães Vieira',
+        revenue: 17984,
+        logos: 1,
+      }),
+      expect.objectContaining({
+        role: 'sdr',
+        memberId: 'lucas-moura',
+        memberName: 'Lucas Moura',
+        meetingsHeld: 15,
+      }),
+      expect.objectContaining({
+        role: 'sdr',
+        memberId: 'wilson-de-carvalho-junior',
+        memberName: 'Wilson Junior',
+        meetingsHeld: 19,
+      }),
+      expect.objectContaining({
+        role: 'sdr',
+        memberId: 'lucas-macedo',
+        memberName: 'Lucas Macedo',
+        meetingsHeld: 1,
+      }),
+    ]);
+  });
+
   test('normalizes the public Google Sheet export into ranking rows', () => {
     const csv = createCsv([
       row({ 0: 'DATA INÍCIO:', 1: '01/05/2026' }),

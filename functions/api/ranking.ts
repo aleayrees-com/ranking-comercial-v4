@@ -1,7 +1,7 @@
 import { parseGoogleSheetRankingCsv } from '../../src/domain/googleSheetSource.js';
 
 const GOOGLE_SHEET_CSV_URL =
-  'https://docs.google.com/spreadsheets/d/1iqFf2dbfsG_tl2FB8TrPsBfjO3xkvQYrnvqheUPY9KE/export?format=csv&gid=839739381';
+  'https://docs.google.com/spreadsheets/d/1iqFf2dbfsG_tl2FB8TrPsBfjO3xkvQYrnvqheUPY9KE/export?format=csv&gid=1481288268';
 
 type CloudflareRequestInit = RequestInit & {
   readonly cf?: {
@@ -16,7 +16,10 @@ export async function onRequestGet(): Promise<Response> {
         cacheTtl: 0,
       },
     };
-    const response = await fetch(GOOGLE_SHEET_CSV_URL, requestInit);
+    const response = await fetch(
+      `${GOOGLE_SHEET_CSV_URL}&cachebust=${Date.now()}`,
+      requestInit,
+    );
 
     if (!response.ok) {
       return jsonResponse(

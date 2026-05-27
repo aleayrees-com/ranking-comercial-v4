@@ -15,20 +15,20 @@ Checklist de QA para a v1 local da feature, considerando a fixture derivada da p
 
 ## Resultado dos criterios de aceite
 
-| Criterio                     | Status                 | Evidencia                                                                                                                                           | Lacuna                                                                 |
-| ---------------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Planilha acessada/rastreada  | Atendido para v1 local | Contrato registra planilha `Cópia de Controle de Resultados \| Alfradique & Co RJ`, abas `LEAD BROKER` e CDRs mensais, GIDs e ranges inspecionados. | Coordenadas definitivas dos blocos ainda dependem do dono da planilha. |
-| Fonte local sem API externa  | Atendido               | `src/data/rankingFixture.ts` contem metadados e linhas locais; a UI carrega fixture local, sem Google Sheets em runtime.                            | Troca por export autorizado ainda pendente.                            |
-| Receita e logos de closers   | Atendido               | `buildRanking` soma `revenue` e `logos`; UI mostra total e lista; testes cobrem ordenacao, totais e desempate.                                      | Nenhuma lacuna critica.                                                |
-| Reunioes de SDR/pre-vendas   | Atendido               | `buildRanking` soma `meetingsHeld`; UI mostra total e lista; testes cobrem filtro de periodo.                                                       | Nenhuma lacuna critica.                                                |
-| Ordenacao de closers         | Atendido               | Comparador ordena por `revenue`, `logos`, `memberName` e `memberId`.                                                                                | Nenhuma lacuna critica.                                                |
-| Ordenacao de SDRs            | Atendido               | Comparador ordena por `meetingsHeld`, `memberName` e `memberId`.                                                                                    | Nenhuma lacuna critica.                                                |
-| Agregacao por integrante     | Atendido               | Teste cobre soma de multiplas linhas na mesma janela de periodo, papel e integrante.                                                                | Nenhuma lacuna critica.                                                |
-| Podio top 3 e lista completa | Atendido               | `src/App.tsx` renderiza `podium-list` e tabela completa por ranking.                                                                                | Validado visualmente via navegador ainda recomendado.                  |
-| Inconsistencias operacionais | Atendido               | Linhas com metrica ausente, negativa ou nome vazio sao rejeitadas pelo dominio; a UI nao exibe painel separado de auditoria na v1.                  | Nenhuma lacuna critica.                                                |
-| Estado vazio                 | Atendido               | UI cobre periodo sem linhas validas em teste controlado; a fixture principal expõe apenas `Maio/2026`.                                              | Nenhuma lacuna critica.                                                |
-| Estado loading               | Atendido               | UI mostra carregamento antes de resolver a fixture local; coberto em `src/App.test.tsx`.                                                            | Nenhuma lacuna critica.                                                |
-| Estado erro                  | Atendido               | UI aceita erro controlado e renderiza mensagem; coberto em `src/App.test.tsx`.                                                                      | Nenhuma lacuna critica.                                                |
+| Criterio                         | Status   | Evidencia                                                                                                                              | Lacuna                                                |
+| -------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Planilha acessada/rastreada      | Atendido | Contrato registra planilha `Controle de Resultados \| Alfradique & Co RJ`, aba `CDR MAIO/26`, GID `1481288268` e ranges inspecionados. | Nenhuma lacuna critica.                               |
+| Fonte em tempo real com fallback | Atendido | `functions/api/ranking.ts` le a exportacao CSV publica sem cache; `src/data/rankingFixture.ts` cobre fallback local.                   | Nenhuma lacuna critica.                               |
+| Receita e logos de closers       | Atendido | `buildRanking` soma `revenue` e `logos`; UI mostra total e lista; testes cobrem ordenacao, totais e desempate.                         | Nenhuma lacuna critica.                               |
+| Reunioes de SDR/pre-vendas       | Atendido | `buildRanking` soma `meetingsHeld`; UI mostra total e lista; testes cobrem filtro de periodo.                                          | Nenhuma lacuna critica.                               |
+| Ordenacao de closers             | Atendido | Comparador ordena por `revenue`, `logos`, `memberName` e `memberId`.                                                                   | Nenhuma lacuna critica.                               |
+| Ordenacao de SDRs                | Atendido | Comparador ordena por `meetingsHeld`, `memberName` e `memberId`.                                                                       | Nenhuma lacuna critica.                               |
+| Agregacao por integrante         | Atendido | Teste cobre soma de multiplas linhas na mesma janela de periodo, papel e integrante.                                                   | Nenhuma lacuna critica.                               |
+| Podio top 3 e lista completa     | Atendido | `src/App.tsx` renderiza `podium-list` e tabela completa por ranking.                                                                   | Validado visualmente via navegador ainda recomendado. |
+| Inconsistencias operacionais     | Atendido | Linhas com metrica ausente, negativa ou nome vazio sao rejeitadas pelo dominio; a UI nao exibe painel separado de auditoria na v1.     | Nenhuma lacuna critica.                               |
+| Estado vazio                     | Atendido | UI cobre periodo sem linhas validas em teste controlado; a fixture principal expõe apenas `Maio/2026`.                                 | Nenhuma lacuna critica.                               |
+| Estado loading                   | Atendido | UI mostra carregamento antes de resolver a fixture local; coberto em `src/App.test.tsx`.                                               | Nenhuma lacuna critica.                               |
+| Estado erro                      | Atendido | UI aceita erro controlado e renderiza mensagem; coberto em `src/App.test.tsx`.                                                         | Nenhuma lacuna critica.                               |
 
 ## Execucao de testes
 
@@ -38,14 +38,16 @@ Comando executado:
 npm test
 ```
 
-Resultado atualizado em 2026-05-26:
+Resultado atualizado em 2026-05-27:
 
 - `src/domain/normalization.test.ts`: passou.
 - `src/domain/ranking.test.ts`: passou.
 - `src/domain/formatting.test.ts`: passou.
+- `src/domain/googleSheetSource.test.ts`: passou.
+- `src/data/rankingFixture.test.ts`: passou.
 - `src/App.test.tsx`: passou.
 
-Resumo observado: 17 testes passaram em 4 arquivos.
+Resumo observado: 33 testes passaram em 7 arquivos.
 
 ## Checklist de release
 
@@ -58,4 +60,4 @@ Resumo observado: 17 testes passaram em 4 arquivos.
 - [x] UI implementada conforme `src/App.test.tsx`.
 - [x] Estados loading/erro conectados a carregamento local e erro controlado.
 - [x] Desempate final por `memberId` implementado e testado.
-- [ ] Coordenadas definitivas da planilha aprovadas.
+- [x] Coordenadas definitivas da aba `CDR MAIO/26` aplicadas na Function.

@@ -35,7 +35,7 @@ interface MemberMapping {
 
 const SOURCE_SPREADSHEET = {
   title: 'Controle de Resultados | Alfradique & Co RJ',
-  url: 'https://docs.google.com/spreadsheets/d/1iqFf2dbfsG_tl2FB8TrPsBfjO3xkvQYrnvqheUPY9KE/edit?usp=sharing',
+  url: 'https://docs.google.com/spreadsheets/d/1iqFf2dbfsG_tl2FB8TrPsBfjO3xkvQYrnvqheUPY9KE/edit?gid=1481288268#gid=1481288268',
   sheet: 'CDR MAIO/26',
   timezone: 'America/Sao_Paulo',
 } as const;
@@ -87,6 +87,16 @@ const IGNORED_CLOSER_KEYS = new Set(['bruno alfradique', 'bruno']);
 export function parseGoogleSheetRankingCsv(csv: string): SheetRankingData {
   const table = parseCsv(csv);
   const period = detectPeriod(table);
+  const cdrSourceRows = createCdrSourceRows(table, period);
+
+  if (cdrSourceRows.length > 0) {
+    return {
+      periods: [period],
+      rows: normalizeLocalRows(cdrSourceRows),
+      sourceSpreadsheet: SOURCE_SPREADSHEET,
+    };
+  }
+
   const headerIndex = table.findIndex((row) =>
     row.some((cell) => normalizeKey(cell) === 'data da compra'),
   );
@@ -107,6 +117,70 @@ export function parseGoogleSheetRankingCsv(csv: string): SheetRankingData {
     rows: normalizeLocalRows(sourceRows),
     sourceSpreadsheet: SOURCE_SPREADSHEET,
   };
+}
+
+function createCdrSourceRows(
+  table: readonly (readonly string[])[],
+  period: PeriodFilter,
+): readonly LocalRankingSourceRow[] {
+  const closerRows = createCloserRowsFromCdrSummary(table, period);
+  const sdrRows = createSdrRowsFromCdrSummary(table, period);
+
+  return [...closerRows, ...sdrRows];
+}
+
+function createCloserRowsFromCdrSummary(
+  table: readonly (readonly string[])[],
+  period: PeriodFilter,
+): readonly LocalRankingSourceRow[] {
+  const section = findSummarySection(table, KNOWN_CLOSERS, 2);
+
+  if (!section) {
+    return [];
+  }
+
+  const revenueRow = findSummaryMetricRow(table, section, 'realizado');
+  const logosRow = findSummaryMetricRow(table, section, 'vendas');
+
+  if (!revenueRow || !logosRow) {
+    return [];
+  }
+
+  return section.members.map(({ column, member }) => ({
+    period: period.end,
+    role: 'closer',
+    memberId: member.id,
+    memberName: member.name,
+    revenue: revenueRow[column] ?? 0,
+    logos: logosRow[column] ?? 0,
+    sourceChannel: 'Lead Broker',
+  }));
+}
+
+function createSdrRowsFromCdrSummary(
+  table: readonly (readonly string[])[],
+  period: PeriodFilter,
+): readonly LocalRankingSourceRow[] {
+  const section = findSummarySection(table, KNOWN_SDRS, 2);
+
+  if (!section) {
+    return [];
+  }
+
+  const meetingsRow = findSummaryMetricRow(table, section, 'realizado');
+
+  if (!meetingsRow) {
+    return [];
+  }
+
+  return section.members.map(({ column, member }) => ({
+    period: period.end,
+    role: 'sdr',
+    memberId: member.id,
+    memberName: member.name,
+    meetingsHeld: meetingsRow[column] ?? 0,
+    sourceChannel: 'Lead Broker',
+  }));
 }
 
 function createCloserSourceRows(
@@ -164,6 +238,81 @@ function createCloserSourceRows(
   }
 
   return Array.from(byCloser.values());
+}
+
+interface SummarySection {
+  readonly headerRowIndex: number;
+  readonly labelColumn: number;
+  readonly members: readonly SummaryMember[];
+}
+
+interface SummaryMember {
+  readonly column: number;
+  readonly member: MemberMapping;
+}
+
+function findSummarySection(
+  table: readonly (readonly string[])[],
+  mappings: readonly MemberMapping[],
+  minimumMembers: number,
+): SummarySection | undefined {
+  for (const [rowIndex, row] of table.entries()) {
+    for (const [columnIndex, cell] of row.entries()) {
+      if (normalizeKey(cell) !== 'meta') {
+        continue;
+      }
+
+      const members = collectSummaryMembers(row, columnIndex + 1, mappings);
+
+      if (members.length >= minimumMembers) {
+        return {
+          headerRowIndex: rowIndex,
+          labelColumn: columnIndex,
+          members,
+        };
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function collectSummaryMembers(
+  row: readonly string[],
+  startColumn: number,
+  mappings: readonly MemberMapping[],
+): SummarySection['members'] {
+  const members: SummaryMember[] = [];
+
+  for (let column = startColumn; column < row.length; column += 1) {
+    const cell = row[column];
+
+    if (normalizeKey(cell) === 'total' || normalizeKey(cell) === 'total time') {
+      break;
+    }
+
+    const member = resolveMember(cell, mappings);
+
+    if (member) {
+      members.push({ column, member });
+    }
+  }
+
+  return members;
+}
+
+function findSummaryMetricRow(
+  table: readonly (readonly string[])[],
+  section: SummarySection,
+  metricLabel: string,
+): readonly string[] | undefined {
+  const normalizedMetricLabel = normalizeKey(metricLabel);
+
+  return table
+    .slice(section.headerRowIndex + 1)
+    .find(
+      (row) => normalizeKey(row[section.labelColumn]) === normalizedMetricLabel,
+    );
 }
 
 function createSdrSourceRows(

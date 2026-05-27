@@ -5,9 +5,9 @@ import {
 } from '../domain/normalization.js';
 
 export const sourceSpreadsheet = {
-  title: 'Cópia de Controle de Resultados | Alfradique & Co RJ',
-  url: 'https://docs.google.com/spreadsheets/d/1iVyJSFP6n_We9TMxFU0xHtcXnAFl6U-0Sgh3StCiqkc/edit?gid=839739381#gid=839739381',
-  sheet: 'LEAD BROKER / CDR MAIO/26',
+  title: 'Controle de Resultados | Alfradique & Co RJ',
+  url: 'https://docs.google.com/spreadsheets/d/1iqFf2dbfsG_tl2FB8TrPsBfjO3xkvQYrnvqheUPY9KE/edit?gid=1481288268#gid=1481288268',
+  sheet: 'CDR MAIO/26',
   timezone: 'America/Sao_Paulo',
 } as const;
 
@@ -25,8 +25,8 @@ export const localSourceRows: readonly LocalRankingSourceRow[] = [
     role: 'closer',
     memberId: 'carlos-guerra',
     memberName: 'Carlos Guerra',
-    revenue: 0,
-    logos: 0,
+    revenue: 24728,
+    logos: 1,
     sourceChannel: 'Lead Broker',
   },
   {
@@ -34,7 +34,7 @@ export const localSourceRows: readonly LocalRankingSourceRow[] = [
     role: 'closer',
     memberId: 'lucas-macedo',
     memberName: 'Lucas Macedo',
-    revenue: 126698.52,
+    revenue: 126699,
     logos: 7,
     sourceChannel: 'Lead Broker',
   },

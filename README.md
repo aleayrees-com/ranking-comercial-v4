@@ -9,7 +9,8 @@ A feature calcula dois rankings por periodo:
 - Closers: ordenados por receita realizada, com logos como desempate.
 - SDR/pre-vendas: ordenados por reunioes realizadas.
 
-A v1 usa uma fixture local derivada da planilha operacional. Nao ha chamada para API externa nesta etapa.
+A v1 em producao le a planilha operacional por uma Function do Cloudflare Pages
+(`/api/ranking`) e mantem uma fixture local apenas como fallback.
 
 ## Como rodar
 
@@ -26,13 +27,19 @@ O `npm run dev` inicia o Vite em `127.0.0.1`; o terminal informa a porta disponi
 
 ## Fonte dos dados
 
-- Planilha: `Cópia de Controle de Resultados | Alfradique & Co RJ`
-- Abas mapeadas: `LEAD BROKER`, `CDR MAIO/26`
-- GID: `839739381`
+- Planilha: `Controle de Resultados | Alfradique & Co RJ`
+- Aba mapeada: `CDR MAIO/26`
+- GID: `1481288268`
 - Timezone: `America/Sao_Paulo`
-- URL: `https://docs.google.com/spreadsheets/d/1iVyJSFP6n_We9TMxFU0xHtcXnAFl6U-0Sgh3StCiqkc/edit?gid=839739381#gid=839739381`
+- URL: `https://docs.google.com/spreadsheets/d/1iqFf2dbfsG_tl2FB8TrPsBfjO3xkvQYrnvqheUPY9KE/edit?gid=1481288268#gid=1481288268`
 
-A fixture local fica em `src/data/rankingFixture.ts` e preserva a rastreabilidade da origem. O contrato esperado esta em `docs/source-contract.md`.
+A Function `functions/api/ranking.ts` busca o CSV publico da aba, sem cache, e
+normaliza os blocos oficiais de `REALIZADO`, `Vendas` e `PRÉ VENDAS`. A fixture
+local fica em `src/data/rankingFixture.ts` e preserva a rastreabilidade da origem.
+O contrato esperado esta em `docs/source-contract.md`.
+
+O site atualiza os dados automaticamente a cada 10 segundos e tambem ao voltar
+para a aba/janela. Nao e necessario dar F5 na TV ou no navegador.
 
 ## Contrato e regras
 

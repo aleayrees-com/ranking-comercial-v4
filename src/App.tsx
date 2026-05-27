@@ -99,7 +99,7 @@ const fixtureModules = (
 ).glob<RankingFixtureModule>('./data/rankingFixture.ts');
 
 const LIVE_RANKING_ENDPOINT = '/api/ranking';
-const LIVE_REFRESH_INTERVAL_MS = 30_000;
+const LIVE_REFRESH_INTERVAL_MS = 10_000;
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
@@ -200,7 +200,7 @@ export function App({
         });
       });
 
-    const intervalId = window.setInterval(() => {
+    const refreshLiveRanking = () => {
       loadLiveRankingData()
         .then((nextState) => {
           if (isActive) {
@@ -210,11 +210,25 @@ export function App({
         .catch(() => {
           // Keep the last known good ranking on transient spreadsheet errors.
         });
-    }, LIVE_REFRESH_INTERVAL_MS);
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshLiveRanking();
+      }
+    };
+
+    const intervalId = window.setInterval(
+      refreshLiveRanking,
+      LIVE_REFRESH_INTERVAL_MS,
+    );
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', refreshLiveRanking);
 
     return () => {
       isActive = false;
       window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', refreshLiveRanking);
     };
   }, [initialError, initialRows]);
 
@@ -771,12 +785,12 @@ async function loadRankingData(): Promise<RankingDataState> {
 }
 
 async function loadLiveRankingData(): Promise<RankingDataState> {
-  const response = await fetch(
-    new URL(LIVE_RANKING_ENDPOINT, window.location.href),
-    {
-      cache: 'no-store',
-    },
-  );
+  const url = new URL(LIVE_RANKING_ENDPOINT, window.location.href);
+  url.searchParams.set('cachebust', String(Date.now()));
+
+  const response = await fetch(url, {
+    cache: 'no-store',
+  });
 
   if (!response.ok) {
     throw new Error(`API de ranking retornou ${response.status}.`);

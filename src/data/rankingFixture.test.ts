@@ -13,14 +13,21 @@ describe('rankingFixture', () => {
 
     expect(result.closers.map((entry) => entry.memberName)).toEqual([
       'Lucas Macedo',
-      'Miguel de Oliveira Guimarães Vieira',
       'Carlos Guerra',
+      'Miguel de Oliveira Guimarães Vieira',
     ]);
     expect(result.closers[0]).toEqual(
       expect.objectContaining({
         memberId: 'lucas-macedo',
-        revenue: 126698.52,
+        revenue: 126699,
         logos: 7,
+      }),
+    );
+    expect(result.closers[1]).toEqual(
+      expect.objectContaining({
+        memberId: 'carlos-guerra',
+        revenue: 24728,
+        logos: 1,
       }),
     );
     expect(result.closers.map((entry) => entry.memberName)).not.toContain(

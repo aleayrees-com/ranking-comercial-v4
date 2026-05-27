@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { App } from './App.js';
@@ -246,12 +246,84 @@ describe('App', () => {
     expect(screen.getAllByText('R$ 42.000')).not.toHaveLength(0);
   });
 
+  test('atualiza dados da API automaticamente sem recarregar a página', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            periods: [periods[0]],
+            rows: [
+              {
+                period: '2026-05-31',
+                role: 'closer',
+                memberId: 'lucas-macedo',
+                memberName: 'Lucas Macedo',
+                revenue: 1000,
+                logos: 1,
+                sourceChannel: 'Lead Broker',
+              },
+            ],
+            sourceSpreadsheet: {
+              title: 'Planilha em tempo real',
+              sheet: 'CDR MAIO/26',
+            },
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            status: 200,
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            periods: [periods[0]],
+            rows: [
+              {
+                period: '2026-05-31',
+                role: 'closer',
+                memberId: 'lucas-macedo',
+                memberName: 'Lucas Macedo',
+                revenue: 2000,
+                logos: 2,
+                sourceChannel: 'Lead Broker',
+              },
+            ],
+            sourceSpreadsheet: {
+              title: 'Planilha em tempo real',
+              sheet: 'CDR MAIO/26',
+            },
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            status: 200,
+          },
+        ),
+      );
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    expect(await screen.findAllByText('R$ 1.000')).not.toHaveLength(0);
+
+    window.dispatchEvent(new Event('focus'));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('R$ 2.000')).not.toHaveLength(0);
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   test('carrega somente maio na fonte local principal', async () => {
     render(<App />);
 
-    await screen.findByText(
-      /Cópia de Controle de Resultados \| Alfradique & Co RJ/,
-    );
+    await screen.findByText(/Controle de Resultados \| Alfradique & Co RJ/);
 
     expect(
       screen.getByRole('button', { name: 'Maio/2026' }),
