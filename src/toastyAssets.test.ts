@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
@@ -31,5 +31,15 @@ describe('Toasty assets', () => {
     const bytes = readFileSync(assetPath);
 
     expect(pngHasAlphaChannel(bytes)).toBe(true);
+  });
+
+  test('includes Rapaz audio effect', () => {
+    const assetPath = resolve(
+      repoRoot,
+      'public/easter-eggs/rapaz-xaropinho.mp3',
+    );
+
+    expect(existsSync(assetPath)).toBe(true);
+    expect(readFileSync(assetPath).length).toBeGreaterThan(0);
   });
 });

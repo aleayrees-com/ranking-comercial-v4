@@ -1,4 +1,7 @@
+type ToastyEffect = 'rapaz' | 'toasty';
+
 interface ToastySignal {
+  readonly effect: ToastyEffect;
   readonly id: string;
   readonly triggeredAt: string | null;
 }
@@ -24,6 +27,7 @@ interface ToastyContext {
 }
 
 const DEFAULT_SIGNAL: ToastySignal = {
+  effect: 'toasty',
   id: '0',
   triggeredAt: null,
 };
@@ -63,6 +67,7 @@ export async function onRequestPost(context: ToastyContext): Promise<Response> {
   }
 
   const signal: ToastySignal = {
+    effect: parseEffect(new URL(request.url).searchParams.get('effect')),
     id: `${Date.now()}-${crypto.randomUUID()}`,
     triggeredAt: new Date().toISOString(),
   };
@@ -203,6 +208,7 @@ function parseSignal(rawSignal: string | null): ToastySignal | null {
     }
 
     return {
+      effect: parseEffect(signal.effect),
       id: signal.id,
       triggeredAt:
         typeof signal.triggeredAt === 'string' ? signal.triggeredAt : null,
@@ -210,6 +216,10 @@ function parseSignal(rawSignal: string | null): ToastySignal | null {
   } catch {
     return null;
   }
+}
+
+function parseEffect(effect: unknown): ToastyEffect {
+  return effect === 'rapaz' ? 'rapaz' : 'toasty';
 }
 
 function createReadResponse(signal: ToastySignal): ToastyReadResponse {

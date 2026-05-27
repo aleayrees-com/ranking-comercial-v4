@@ -119,6 +119,7 @@ function mockAudio(
 }
 
 interface MockToastySignal {
+  readonly effect?: string;
   readonly id: string;
   readonly serverNow?: string;
   readonly triggeredAt: string | null;
@@ -631,6 +632,42 @@ describe('App', () => {
     expect(screen.getByLabelText('Denner Toasty')).toBeInTheDocument();
   });
 
+  test('aciona Denner Rapaz remoto com áudio e placa Rapaz', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-27T12:00:05.000Z'));
+    const { instances, playMock } = mockAudio();
+    mockLiveRankingAndToastySignal([
+      {
+        effect: 'rapaz',
+        id: 'remote-rapaz',
+        serverNow: '2026-05-27T12:00:05.000Z',
+        triggeredAt: '2026-05-27T12:00:00.000Z',
+      },
+    ]);
+
+    render(<App />);
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(2_000);
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByLabelText('Denner Toasty')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Denner Rapaz')).toBeInTheDocument();
+    expect(screen.getByText('RAPAZ!')).toBeInTheDocument();
+    expect(screen.getByAltText('Denner')).toHaveAttribute(
+      'src',
+      '/easter-eggs/denner-toasty-wide-eyed.png',
+    );
+    expect(playMock).toHaveBeenCalledTimes(1);
+    expect(instances[0]?.src).toBe('/easter-eggs/rapaz-xaropinho.mp3');
+  });
+
   test('ignora comando remoto antigo recebido no primeiro polling da TV', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-27T12:00:30.000Z'));
@@ -731,10 +768,11 @@ describe('App', () => {
 
     render(<App initialRows={rows} initialPeriods={periods} />);
 
-    await user.click(screen.getByRole('button', { name: 'Acionar na TV' }));
+    await user.click(screen.getByRole('button', { name: 'Soltar Toasty' }));
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(String(fetchMock.mock.calls[0][0])).toContain('/api/toasty');
+    expect(String(fetchMock.mock.calls[0][0])).toContain('effect=toasty');
     expect(fetchMock.mock.calls[0][1]).toMatchObject({
       cache: 'no-store',
       method: 'POST',
@@ -744,6 +782,33 @@ describe('App', () => {
     ).toBe('controle-v4');
     expect(
       await screen.findByText('Comando enviado. O Denner vai aparecer na TV.'),
+    ).toBeInTheDocument();
+  });
+
+  test('envia comando remoto do Rapaz pela tela de controle', async () => {
+    window.history.pushState({}, '', '/?control=toasty&key=controle-v4');
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ effect: 'rapaz', id: 'remote-rapaz' }), {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        status: 201,
+      }),
+    );
+    const user = userEvent.setup();
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App initialRows={rows} initialPeriods={periods} />);
+
+    await user.click(screen.getByRole('button', { name: 'Soltar Rapaz' }));
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toContain('effect=rapaz');
+    expect(
+      await screen.findByText(
+        'Comando enviado. O Denner Rapaz vai aparecer na TV.',
+      ),
     ).toBeInTheDocument();
   });
 

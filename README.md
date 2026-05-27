@@ -41,10 +41,14 @@ O contrato esperado esta em `docs/source-contract.md`.
 O site atualiza os dados automaticamente a cada 10 segundos e tambem ao voltar
 para a aba/janela. Nao e necessario dar F5 na TV ou no navegador.
 
-## Controle remoto do Denner Toasty
+## Controle remoto dos efeitos do Denner
 
 - Tela de controle: `https://rank.v4alfradique.com/?control=toasty`
 - Endpoint: `POST /api/toasty`
+- Botao `Soltar Toasty`: mostra o Denner com placa `TOASTY!` e toca o audio
+  Toasty.
+- Botao `Soltar Rapaz`: mostra o Denner com placa `RAPAZ!` e toca o audio
+  Rapaz.
 - A TV consulta `GET /api/toasty` a cada 2 segundos e dispara o easter egg
   quando encontra um comando recente.
 

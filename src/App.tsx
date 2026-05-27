@@ -58,6 +58,7 @@ interface RankingApiPayload {
 }
 
 interface ToastySignalApiPayload {
+  readonly effect?: unknown;
   readonly id?: unknown;
   readonly serverNow?: unknown;
   readonly triggeredAt?: unknown;
@@ -88,6 +89,7 @@ type RankingDataState =
     };
 
 type RankingKind = 'closer' | 'sdr';
+type RemoteEffect = 'rapaz' | 'toasty';
 type ToastyControlState = 'idle' | 'sending' | 'sent' | 'error';
 type ToastyTriggerOptions = {
   readonly shouldPlaySound?: boolean;
@@ -112,6 +114,7 @@ const fixtureModules = (
 
 const LIVE_RANKING_ENDPOINT = '/api/ranking';
 const LIVE_REFRESH_INTERVAL_MS = 10_000;
+const RAPAZ_AUDIO_SRC = '/easter-eggs/rapaz-xaropinho.mp3';
 const TOASTY_AUDIO_SRC = '/easter-eggs/denner-toasty-v2.mp3';
 const TOASTY_CONTROL_ENDPOINT = '/api/toasty';
 const TOASTY_IMAGE_SRC = '/easter-eggs/denner-toasty-wide-eyed.png';
@@ -185,12 +188,19 @@ export function App({
   const [expandedPanelKind, setExpandedPanelKind] =
     useState<RankingKind | null>(null);
   const [isToastySoundBlocked, setIsToastySoundBlocked] = useState(false);
-  const [showToasty, setShowToasty] = useState(false);
+  const [visibleEffect, setVisibleEffect] = useState<RemoteEffect | null>(null);
   const [toastyControlState, setToastyControlState] =
     useState<ToastyControlState>('idle');
+  const [lastSentEffect, setLastSentEffect] = useState<RemoteEffect>('toasty');
   const hideToastyTimeoutRef = useRef<number | undefined>(undefined);
   const lastToastySignalIdRef = useRef<string | null>(null);
-  const toastyAudioRef = useRef<HTMLAudioElement | null>(null);
+  const blockedEffectRef = useRef<RemoteEffect>('toasty');
+  const effectAudioRefs = useRef<Record<RemoteEffect, HTMLAudioElement | null>>(
+    {
+      rapaz: null,
+      toasty: null,
+    },
+  );
 
   const isToastyControl = useMemo(
     () =>
@@ -220,33 +230,40 @@ export function App({
     return buildRanking(dataState.rows, selectedPeriod);
   }, [dataState, selectedPeriod]);
 
-  const getToastyAudio = useCallback(() => {
-    if (!toastyAudioRef.current) {
-      const audio = new Audio(TOASTY_AUDIO_SRC);
+  const getEffectAudio = useCallback((effect: RemoteEffect) => {
+    const audioSrc = effect === 'rapaz' ? RAPAZ_AUDIO_SRC : TOASTY_AUDIO_SRC;
+    let audio = effectAudioRefs.current[effect];
+
+    if (!audio) {
+      audio = new Audio(audioSrc);
       audio.preload = 'auto';
       audio.volume = 0.9;
-      toastyAudioRef.current = audio;
+      effectAudioRefs.current[effect] = audio;
     }
 
-    return toastyAudioRef.current;
+    return audio;
   }, []);
 
-  const playToastySound = useCallback(async () => {
-    const audio = getToastyAudio();
+  const playEffectSound = useCallback(
+    async (effect: RemoteEffect) => {
+      const audio = getEffectAudio(effect);
 
-    audio.pause();
-    audio.currentTime = 0;
+      audio.pause();
+      audio.currentTime = 0;
+      blockedEffectRef.current = effect;
 
-    try {
-      await audio.play();
-      setIsToastySoundBlocked(false);
-    } catch {
-      setIsToastySoundBlocked(true);
-    }
-  }, [getToastyAudio]);
+      try {
+        await audio.play();
+        setIsToastySoundBlocked(false);
+      } catch {
+        setIsToastySoundBlocked(true);
+      }
+    },
+    [getEffectAudio],
+  );
 
-  const stopToastySound = useCallback(() => {
-    const audio = toastyAudioRef.current;
+  const stopEffectSound = useCallback((effect: RemoteEffect) => {
+    const audio = effectAudioRefs.current[effect];
 
     if (!audio) {
       return;
@@ -256,12 +273,18 @@ export function App({
     audio.currentTime = 0;
   }, []);
 
+  const playBlockedEffectSound = useCallback(
+    () => playEffectSound(blockedEffectRef.current),
+    [playEffectSound],
+  );
+
   const triggerToasty = useCallback(
     ({ shouldPlaySound = true }: ToastyTriggerOptions = {}) => {
-      setShowToasty(true);
+      setVisibleEffect('toasty');
+      stopEffectSound('rapaz');
 
       if (shouldPlaySound) {
-        void playToastySound();
+        void playEffectSound('toasty');
       }
 
       if (hideToastyTimeoutRef.current !== undefined) {
@@ -269,42 +292,78 @@ export function App({
       }
 
       hideToastyTimeoutRef.current = window.setTimeout(() => {
-        setShowToasty(false);
-        stopToastySound();
+        setVisibleEffect(null);
+        stopEffectSound('toasty');
         hideToastyTimeoutRef.current = undefined;
       }, TOASTY_VISIBLE_MS);
     },
-    [playToastySound, stopToastySound],
+    [playEffectSound, stopEffectSound],
   );
 
-  const triggerRemoteToasty = useCallback(async () => {
-    const url = new URL(TOASTY_CONTROL_ENDPOINT, window.location.href);
-    const headers = new Headers();
+  const triggerRapaz = useCallback(() => {
+    setVisibleEffect('rapaz');
+    stopEffectSound('toasty');
+    void playEffectSound('rapaz');
 
-    if (toastyControlKey) {
-      headers.set('x-toasty-key', toastyControlKey);
-      url.searchParams.set('key', toastyControlKey);
+    if (hideToastyTimeoutRef.current !== undefined) {
+      window.clearTimeout(hideToastyTimeoutRef.current);
     }
 
-    setToastyControlState('sending');
+    hideToastyTimeoutRef.current = window.setTimeout(() => {
+      setVisibleEffect(null);
+      stopEffectSound('rapaz');
+      hideToastyTimeoutRef.current = undefined;
+    }, TOASTY_VISIBLE_MS);
+  }, [playEffectSound, stopEffectSound]);
 
-    try {
-      const response = await fetch(url, {
-        cache: 'no-store',
-        headers,
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        throw new Error(`API Toasty retornou ${response.status}.`);
+  const triggerRemoteEffect = useCallback(
+    (effect: RemoteEffect) => {
+      if (effect === 'rapaz') {
+        triggerRapaz();
+        return;
       }
 
-      setToastyControlState('sent');
-      triggerToasty({ shouldPlaySound: false });
-    } catch {
-      setToastyControlState('error');
-    }
-  }, [toastyControlKey, triggerToasty]);
+      triggerToasty();
+    },
+    [triggerRapaz, triggerToasty],
+  );
+
+  const triggerRemoteControlEffect = useCallback(
+    async (effect: RemoteEffect) => {
+      const url = new URL(TOASTY_CONTROL_ENDPOINT, window.location.href);
+      const headers = new Headers();
+
+      url.searchParams.set('effect', effect);
+
+      if (toastyControlKey) {
+        headers.set('x-toasty-key', toastyControlKey);
+        url.searchParams.set('key', toastyControlKey);
+      }
+
+      setLastSentEffect(effect);
+      setToastyControlState('sending');
+
+      try {
+        const response = await fetch(url, {
+          cache: 'no-store',
+          headers,
+          method: 'POST',
+        });
+
+        if (!response.ok) {
+          throw new Error(`API Toasty retornou ${response.status}.`);
+        }
+
+        setToastyControlState('sent');
+        if (effect === 'toasty') {
+          triggerToasty({ shouldPlaySound: false });
+        }
+      } catch {
+        setToastyControlState('error');
+      }
+    },
+    [toastyControlKey, triggerToasty],
+  );
 
   useEffect(() => {
     if (initialRows || initialError) {
@@ -383,9 +442,9 @@ export function App({
         window.clearTimeout(hideToastyTimeoutRef.current);
       }
 
-      stopToastySound();
+      stopEffectSound('toasty');
     };
-  }, [stopToastySound, triggerToasty]);
+  }, [stopEffectSound, triggerToasty]);
 
   useEffect(() => {
     if (initialRows || initialError || isToastyControl) {
@@ -417,7 +476,7 @@ export function App({
               signal.id !== '0' &&
               isRecentToastySignal(signal, TOASTY_INITIAL_SIGNAL_MAX_AGE_MS)
             ) {
-              triggerToasty();
+              triggerRemoteEffect(signal.effect);
             }
 
             return;
@@ -426,7 +485,7 @@ export function App({
           lastToastySignalIdRef.current = signal.id;
 
           if (signal.id !== '0' && isFreshSignal) {
-            triggerToasty();
+            triggerRemoteEffect(signal.effect);
           }
         })
         .catch(() => {
@@ -443,7 +502,7 @@ export function App({
       isActive = false;
       window.clearInterval(intervalId);
     };
-  }, [initialError, initialRows, isToastyControl, triggerToasty]);
+  }, [initialError, initialRows, isToastyControl, triggerRemoteEffect]);
 
   useEffect(() => {
     if (!expandedPanelKind) {
@@ -469,7 +528,8 @@ export function App({
   if (isToastyControl) {
     return (
       <ToastyControlPanel
-        onTrigger={triggerRemoteToasty}
+        lastSentEffect={lastSentEffect}
+        onTrigger={triggerRemoteControlEffect}
         status={toastyControlState}
       />
     );
@@ -587,14 +647,17 @@ export function App({
         ) : null}
       </main>
 
-      {showToasty ? (
-        <DennerToasty expanded={expandedPanelKind !== null} />
+      {visibleEffect ? (
+        <DennerToasty
+          effect={visibleEffect}
+          expanded={expandedPanelKind !== null}
+        />
       ) : null}
       {isToastySoundBlocked ? (
         <button
           aria-label="Ativar som do Toasty"
           className="toasty-sound-enable"
-          onClick={() => void playToastySound()}
+          onClick={() => void playBlockedEffectSound()}
           type="button"
         >
           Ativar som
@@ -891,7 +954,15 @@ function PodiumItem({
   );
 }
 
-function DennerToasty({ expanded }: { readonly expanded: boolean }) {
+function DennerToasty({
+  effect,
+  expanded,
+}: {
+  readonly effect: RemoteEffect;
+  readonly expanded: boolean;
+}) {
+  const label = effect === 'rapaz' ? 'RAPAZ!' : 'TOASTY!';
+
   return (
     <aside
       className={
@@ -899,26 +970,31 @@ function DennerToasty({ expanded }: { readonly expanded: boolean }) {
           ? 'toasty-easter-egg toasty-easter-egg--over-expanded'
           : 'toasty-easter-egg'
       }
-      aria-label="Denner Toasty"
+      aria-label={effect === 'rapaz' ? 'Denner Rapaz' : 'Denner Toasty'}
     >
       <img alt="Denner" height="693" src={TOASTY_IMAGE_SRC} width="520" />
-      <strong>TOASTY!</strong>
+      <strong>{label}</strong>
     </aside>
   );
 }
 
 function ToastyControlPanel({
+  lastSentEffect,
   onTrigger,
   status,
 }: {
-  readonly onTrigger: () => Promise<void>;
+  readonly lastSentEffect: RemoteEffect;
+  readonly onTrigger: (effect: RemoteEffect) => Promise<void>;
   readonly status: ToastyControlState;
 }) {
   const statusLabel = {
     error: 'Não consegui acionar. Tenta de novo.',
     idle: 'Pronto para acionar na tela do ranking.',
     sending: 'Enviando comando...',
-    sent: 'Comando enviado. O Denner vai aparecer na TV.',
+    sent:
+      lastSentEffect === 'rapaz'
+        ? 'Comando enviado. O Denner Rapaz vai aparecer na TV.'
+        : 'Comando enviado. O Denner vai aparecer na TV.',
   } satisfies Record<ToastyControlState, string>;
 
   return (
@@ -926,15 +1002,25 @@ function ToastyControlPanel({
       <section className="control-card" aria-labelledby="control-title">
         <img src="/v4logo.png" alt="V4 Company" />
         <p className="eyebrow">Controle remoto</p>
-        <h1 id="control-title">Denner Toasty</h1>
-        <button
-          className="control-trigger"
-          disabled={status === 'sending'}
-          onClick={() => void onTrigger()}
-          type="button"
-        >
-          Acionar na TV
-        </button>
+        <h1 id="control-title">Efeitos da TV</h1>
+        <div className="control-actions">
+          <button
+            className="control-trigger"
+            disabled={status === 'sending'}
+            onClick={() => void onTrigger('toasty')}
+            type="button"
+          >
+            Soltar Toasty
+          </button>
+          <button
+            className="control-trigger control-trigger--secondary"
+            disabled={status === 'sending'}
+            onClick={() => void onTrigger('rapaz')}
+            type="button"
+          >
+            Soltar Rapaz
+          </button>
+        </div>
         <p className={`control-status control-status--${status}`}>
           {statusLabel[status]}
         </p>
@@ -1101,6 +1187,7 @@ async function loadLiveRankingData(): Promise<RankingDataState> {
 }
 
 async function loadToastySignal(): Promise<{
+  readonly effect: RemoteEffect;
   readonly id: string;
   readonly serverNow: string | null;
   readonly triggeredAt: string | null;
@@ -1123,11 +1210,16 @@ async function loadToastySignal(): Promise<{
   }
 
   return {
+    effect: parseRemoteEffect(payload.effect),
     id: payload.id,
     serverNow: typeof payload.serverNow === 'string' ? payload.serverNow : null,
     triggeredAt:
       typeof payload.triggeredAt === 'string' ? payload.triggeredAt : null,
   };
+}
+
+function parseRemoteEffect(effect: unknown): RemoteEffect {
+  return effect === 'rapaz' ? 'rapaz' : 'toasty';
 }
 
 function isRecentToastySignal(

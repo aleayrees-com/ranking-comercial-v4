@@ -36,6 +36,36 @@ describe('/api/toasty', () => {
     expect(Date.parse(getPayload.serverNow)).not.toBeNaN();
   });
 
+  test('registra comando remoto do Rapaz pelo KV', async () => {
+    const env = {
+      TOASTY_KV: createKv(),
+    };
+    const request = new Request(
+      'https://rank.v4alfradique.com/api/toasty?effect=rapaz',
+      {
+        method: 'POST',
+      },
+    );
+
+    const postResponse = await onRequestPost({ env, request });
+    const postPayload = (await postResponse.json()) as {
+      readonly effect: string;
+      readonly id: string;
+    };
+    const getResponse = await onRequestGet({ env, request });
+    const getPayload = (await getResponse.json()) as {
+      readonly effect: string;
+      readonly id: string;
+    };
+
+    expect(postResponse.status).toBe(201);
+    expect(postPayload.effect).toBe('rapaz');
+    expect(getPayload).toMatchObject({
+      effect: 'rapaz',
+      id: postPayload.id,
+    });
+  });
+
   test('informa health do binding KV sem disparar comando', async () => {
     const env = {
       TOASTY_KV: createKv(),
@@ -75,12 +105,14 @@ describe('/api/toasty', () => {
     await onRequestPost({ env, request: postRequest });
     const resetResponse = await onRequestPost({ env, request: resetRequest });
     const resetPayload = (await resetResponse.json()) as {
+      readonly effect: string;
       readonly id: string;
       readonly triggeredAt: string | null;
     };
 
     expect(resetResponse.status).toBe(200);
     expect(resetPayload).toEqual({
+      effect: 'toasty',
       id: '0',
       triggeredAt: null,
     });
