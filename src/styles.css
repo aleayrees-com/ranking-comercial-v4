@@ -467,12 +467,29 @@ button:focus-visible {
 
 .podium-list {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(112px, 0.92fr) minmax(128px, 1.18fr) minmax(
+      112px,
+      0.92fr
+    );
   gap: 12px;
   align-items: end;
   margin: 0 0 18px;
   padding: 26px 0 0;
+  overflow-x: auto;
+  overflow-y: visible;
   list-style: none;
+}
+
+.podium-item[data-position='1'] {
+  order: 2;
+}
+
+.podium-item[data-position='2'] {
+  order: 1;
+}
+
+.podium-item[data-position='3'] {
+  order: 3;
 }
 
 .podium-item {
@@ -931,23 +948,6 @@ tbody tr:last-child td {
 
   .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .podium-list {
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.12fr) minmax(0, 0.9fr);
-    align-items: end;
-  }
-
-  .podium-item[data-position='1'] {
-    order: 2;
-  }
-
-  .podium-item[data-position='2'] {
-    order: 1;
-  }
-
-  .podium-item[data-position='3'] {
-    order: 3;
   }
 
   .podium-item[data-position='1'] .podium-card-button {
