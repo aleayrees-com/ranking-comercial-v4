@@ -116,7 +116,7 @@ const TOASTY_CONTROL_ENDPOINT = '/api/toasty';
 const TOASTY_IMAGE_SRC = '/easter-eggs/denner-toasty-v4.webp';
 const TOASTY_INTERVAL_MS = 300_000;
 const TOASTY_POLL_INTERVAL_MS = 2_000;
-const TOASTY_SIGNAL_MAX_AGE_MS = 30_000;
+const TOASTY_SIGNAL_MAX_AGE_MS = 120_000;
 const TOASTY_VISIBLE_MS = 2_800;
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {

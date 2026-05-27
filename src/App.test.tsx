@@ -118,7 +118,9 @@ function mockAudio(
   };
 }
 
-function mockLiveRankingAndToastySignal() {
+function mockLiveRankingAndToastySignal(
+  triggeredAt = '2026-05-27T12:00:00.000Z',
+) {
   const fetchMock = vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
 
@@ -138,7 +140,7 @@ function mockLiveRankingAndToastySignal() {
         new Response(
           JSON.stringify({
             id: 'remote-1',
-            triggeredAt: '2026-05-27T12:00:00.000Z',
+            triggeredAt,
           }),
           {
             headers: {
@@ -480,6 +482,28 @@ describe('App', () => {
     vi.setSystemTime(new Date('2026-05-27T12:00:00.000Z'));
     const { playMock } = mockAudio();
     mockLiveRankingAndToastySignal();
+
+    render(<App />);
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(2_000);
+      await Promise.resolve();
+    });
+
+    expect(screen.getByLabelText('Denner Toasty')).toBeInTheDocument();
+    expect(playMock).toHaveBeenCalledTimes(1);
+  });
+
+  test('aceita comando remoto com atraso de propagação do KV', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-27T12:01:30.000Z'));
+    const { playMock } = mockAudio();
+    mockLiveRankingAndToastySignal('2026-05-27T12:00:00.000Z');
 
     render(<App />);
 

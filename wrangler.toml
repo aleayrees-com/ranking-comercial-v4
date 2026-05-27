@@ -1,0 +1,6 @@
+name = "ranking-comercial-v4"
+pages_build_output_dir = "./dist"
+
+[[kv_namespaces]]
+binding = "TOASTY_KV"
+id = "1bb6590753e14805aaaffb00901bdda5"
