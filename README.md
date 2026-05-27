@@ -41,6 +41,17 @@ O contrato esperado esta em `docs/source-contract.md`.
 O site atualiza os dados automaticamente a cada 10 segundos e tambem ao voltar
 para a aba/janela. Nao e necessario dar F5 na TV ou no navegador.
 
+## Controle remoto do Denner Toasty
+
+- Tela de controle: `https://rank.v4alfradique.com/?control=toasty`
+- Endpoint: `POST /api/toasty`
+- A TV consulta `GET /api/toasty` a cada 2 segundos e dispara o easter egg
+  quando encontra um comando recente.
+
+Para producao confiavel entre dispositivos, vincule um KV namespace no
+Cloudflare Pages com o binding `TOASTY_KV` ou `RANKING_TOASTY_KV`. Se definir
+`TOASTY_CONTROL_KEY`, abra o controle com `?control=toasty&key=SUA_CHAVE`.
+
 ## Contrato e regras
 
 - Contrato da fonte local: `docs/source-contract.md`

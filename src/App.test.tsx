@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { App } from './App.js';
@@ -86,7 +86,9 @@ const rows: readonly RawRankingRow[] = [
 
 describe('App', () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
+    window.history.pushState({}, '', '/');
   });
 
   test('referencia fotos apenas dentro dos rankings de closers e SDRs', () => {
@@ -357,6 +359,60 @@ describe('App', () => {
 
     expect(firstHeight).toBeGreaterThan(secondHeight + 80);
     expect(firstPlace.querySelector('.lucide-crown')).not.toBeNull();
+    expect(firstPlace.querySelector('.podium-v4-crown')).not.toBeNull();
+    expect(secondPlace.querySelector('.podium-v4-crown')).toBeNull();
+  });
+
+  test('exibe Denner Toasty automaticamente a cada cinco minutos', async () => {
+    vi.useFakeTimers();
+
+    render(<App initialRows={rows} initialPeriods={periods} />);
+
+    expect(screen.queryByLabelText('Denner Toasty')).not.toBeInTheDocument();
+
+    await act(async () => {
+      vi.advanceTimersByTime(300_000);
+    });
+
+    expect(screen.getByLabelText('Denner Toasty')).toBeInTheDocument();
+
+    await act(async () => {
+      vi.advanceTimersByTime(2_800);
+    });
+
+    expect(screen.queryByLabelText('Denner Toasty')).not.toBeInTheDocument();
+  });
+
+  test('envia comando remoto do Denner pela tela de controle', async () => {
+    window.history.pushState({}, '', '/?control=toasty&key=controle-v4');
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ id: 'remote-1' }), {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        status: 201,
+      }),
+    );
+    const user = userEvent.setup();
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App initialRows={rows} initialPeriods={periods} />);
+
+    await user.click(screen.getByRole('button', { name: 'Acionar na TV' }));
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/api/toasty');
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({
+      cache: 'no-store',
+      method: 'POST',
+    });
+    expect(
+      (fetchMock.mock.calls[0][1]?.headers as Headers).get('x-toasty-key'),
+    ).toBe('controle-v4');
+    expect(
+      await screen.findByText('Comando enviado. O Denner vai aparecer na TV.'),
+    ).toBeInTheDocument();
   });
 
   test('renderiza bases de pódio com metais por posição', () => {

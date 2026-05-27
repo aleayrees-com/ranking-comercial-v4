@@ -14,7 +14,9 @@ import {
 } from 'lucide-react';
 import {
   useEffect,
+  useCallback,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type MouseEvent,
@@ -55,6 +57,11 @@ interface RankingApiPayload {
   readonly sourceSpreadsheet?: unknown;
 }
 
+interface ToastySignalApiPayload {
+  readonly id?: unknown;
+  readonly triggeredAt?: unknown;
+}
+
 interface ImportMetaWithGlob extends ImportMeta {
   glob<TModule>(pattern: string): Record<string, () => Promise<TModule>>;
 }
@@ -80,6 +87,7 @@ type RankingDataState =
     };
 
 type RankingKind = 'closer' | 'sdr';
+type ToastyControlState = 'idle' | 'sending' | 'sent' | 'error';
 
 type PodiumItemStyle = CSSProperties & {
   readonly '--podium-fill': string;
@@ -100,6 +108,11 @@ const fixtureModules = (
 
 const LIVE_RANKING_ENDPOINT = '/api/ranking';
 const LIVE_REFRESH_INTERVAL_MS = 10_000;
+const TOASTY_CONTROL_ENDPOINT = '/api/toasty';
+const TOASTY_INTERVAL_MS = 300_000;
+const TOASTY_POLL_INTERVAL_MS = 2_000;
+const TOASTY_SIGNAL_MAX_AGE_MS = 30_000;
+const TOASTY_VISIBLE_MS = 2_800;
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
@@ -159,6 +172,21 @@ export function App({
   );
   const [expandedPanelKind, setExpandedPanelKind] =
     useState<RankingKind | null>(null);
+  const [showToasty, setShowToasty] = useState(false);
+  const [toastyControlState, setToastyControlState] =
+    useState<ToastyControlState>('idle');
+  const hideToastyTimeoutRef = useRef<number | undefined>(undefined);
+  const lastToastySignalIdRef = useRef('0');
+
+  const isToastyControl = useMemo(
+    () =>
+      new URLSearchParams(window.location.search).get('control') === 'toasty',
+    [],
+  );
+  const toastyControlKey = useMemo(
+    () => new URLSearchParams(window.location.search).get('key') ?? '',
+    [],
+  );
 
   const selectedPeriod =
     periods.find((period) => getPeriodKey(period) === selectedPeriodKey) ??
@@ -172,6 +200,48 @@ export function App({
 
     return buildRanking(dataState.rows, selectedPeriod);
   }, [dataState, selectedPeriod]);
+
+  const triggerToasty = useCallback(() => {
+    setShowToasty(true);
+
+    if (hideToastyTimeoutRef.current !== undefined) {
+      window.clearTimeout(hideToastyTimeoutRef.current);
+    }
+
+    hideToastyTimeoutRef.current = window.setTimeout(() => {
+      setShowToasty(false);
+      hideToastyTimeoutRef.current = undefined;
+    }, TOASTY_VISIBLE_MS);
+  }, []);
+
+  const triggerRemoteToasty = useCallback(async () => {
+    const url = new URL(TOASTY_CONTROL_ENDPOINT, window.location.href);
+    const headers = new Headers();
+
+    if (toastyControlKey) {
+      headers.set('x-toasty-key', toastyControlKey);
+      url.searchParams.set('key', toastyControlKey);
+    }
+
+    setToastyControlState('sending');
+
+    try {
+      const response = await fetch(url, {
+        cache: 'no-store',
+        headers,
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Toasty retornou ${response.status}.`);
+      }
+
+      setToastyControlState('sent');
+      triggerToasty();
+    } catch {
+      setToastyControlState('error');
+    }
+  }, [toastyControlKey, triggerToasty]);
 
   useEffect(() => {
     if (initialRows || initialError) {
@@ -239,6 +309,58 @@ export function App({
   }, [periods, selectedPeriodKey]);
 
   useEffect(() => {
+    const intervalId = window.setInterval(triggerToasty, TOASTY_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+
+      if (hideToastyTimeoutRef.current !== undefined) {
+        window.clearTimeout(hideToastyTimeoutRef.current);
+      }
+    };
+  }, [triggerToasty]);
+
+  useEffect(() => {
+    if (initialRows || initialError || isToastyControl) {
+      return;
+    }
+
+    let isActive = true;
+
+    const pollRemoteToasty = () => {
+      loadToastySignal()
+        .then((signal) => {
+          if (!isActive || !signal) {
+            return;
+          }
+
+          if (lastToastySignalIdRef.current === signal.id) {
+            return;
+          }
+
+          lastToastySignalIdRef.current = signal.id;
+
+          if (signal.id !== '0' && isRecentToastySignal(signal.triggeredAt)) {
+            triggerToasty();
+          }
+        })
+        .catch(() => {
+          // Remote control is optional; keep the ranking running if it fails.
+        });
+    };
+
+    const intervalId = window.setInterval(
+      pollRemoteToasty,
+      TOASTY_POLL_INTERVAL_MS,
+    );
+
+    return () => {
+      isActive = false;
+      window.clearInterval(intervalId);
+    };
+  }, [initialError, initialRows, isToastyControl, triggerToasty]);
+
+  useEffect(() => {
     if (!expandedPanelKind) {
       return;
     }
@@ -258,6 +380,15 @@ export function App({
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [expandedPanelKind]);
+
+  if (isToastyControl) {
+    return (
+      <ToastyControlPanel
+        onTrigger={triggerRemoteToasty}
+        status={toastyControlState}
+      />
+    );
+  }
 
   return (
     <main className="app-shell">
@@ -365,6 +496,8 @@ export function App({
           </div>
         </>
       ) : null}
+
+      {showToasty ? <DennerToasty /> : null}
     </main>
   );
 }
@@ -618,6 +751,12 @@ function PodiumItem({
         type="button"
       >
         <span className="podium-card-top">
+          {entry.position === 1 ? (
+            <span className="podium-v4-crown" aria-hidden="true">
+              <Crown size={42} />
+              <span>V4</span>
+            </span>
+          ) : null}
           {investor ? (
             <InvestorImage investor={investor} variant="member" />
           ) : (
@@ -647,6 +786,56 @@ function PodiumItem({
         </span>
       </button>
     </li>
+  );
+}
+
+function DennerToasty() {
+  return (
+    <aside className="toasty-easter-egg" aria-label="Denner Toasty">
+      <img
+        alt="Denner"
+        height="365"
+        src="/easter-eggs/denner-toasty.png"
+        width="383"
+      />
+      <strong>TOASTY!</strong>
+    </aside>
+  );
+}
+
+function ToastyControlPanel({
+  onTrigger,
+  status,
+}: {
+  readonly onTrigger: () => Promise<void>;
+  readonly status: ToastyControlState;
+}) {
+  const statusLabel = {
+    error: 'Não consegui acionar. Tenta de novo.',
+    idle: 'Pronto para acionar na tela do ranking.',
+    sending: 'Enviando comando...',
+    sent: 'Comando enviado. O Denner vai aparecer na TV.',
+  } satisfies Record<ToastyControlState, string>;
+
+  return (
+    <main className="control-shell">
+      <section className="control-card" aria-labelledby="control-title">
+        <img src="/v4logo.png" alt="V4 Company" />
+        <p className="eyebrow">Controle remoto</p>
+        <h1 id="control-title">Denner Toasty</h1>
+        <button
+          className="control-trigger"
+          disabled={status === 'sending'}
+          onClick={() => void onTrigger()}
+          type="button"
+        >
+          Acionar na TV
+        </button>
+        <p className={`control-status control-status--${status}`}>
+          {statusLabel[status]}
+        </p>
+      </section>
+    </main>
   );
 }
 
@@ -805,6 +994,48 @@ async function loadLiveRankingData(): Promise<RankingDataState> {
     rows,
     sourceInfo: extractSourceInfo(payload.sourceSpreadsheet),
   });
+}
+
+async function loadToastySignal(): Promise<{
+  readonly id: string;
+  readonly triggeredAt: string | null;
+} | null> {
+  const url = new URL(TOASTY_CONTROL_ENDPOINT, window.location.href);
+  url.searchParams.set('cachebust', String(Date.now()));
+
+  const response = await fetch(url, {
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const payload = (await response.json()) as ToastySignalApiPayload;
+
+  if (typeof payload.id !== 'string') {
+    return null;
+  }
+
+  return {
+    id: payload.id,
+    triggeredAt:
+      typeof payload.triggeredAt === 'string' ? payload.triggeredAt : null,
+  };
+}
+
+function isRecentToastySignal(triggeredAt: string | null): boolean {
+  if (!triggeredAt) {
+    return false;
+  }
+
+  const timestamp = Date.parse(triggeredAt);
+
+  if (Number.isNaN(timestamp)) {
+    return false;
+  }
+
+  return Date.now() - timestamp <= TOASTY_SIGNAL_MAX_AGE_MS;
 }
 
 function createReadyState({
