@@ -993,6 +993,54 @@ tbody tr:last-child td {
   }
 }
 
+@media (min-width: 1280px) {
+  .dashboard-header,
+  .summary-section,
+  .ranking-grid,
+  .state-card {
+    width: min(100%, calc(100vw - 72px));
+    max-width: 1840px;
+  }
+
+  .ranking-panel,
+  .inconsistency-panel {
+    width: 100%;
+    max-width: none;
+  }
+
+  .podium-list,
+  .ranking-panel.is-expanded .podium-list {
+    grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.16fr) minmax(0, 0.94fr);
+    align-items: end;
+  }
+
+  .ranking-panel.is-expanded .podium-list {
+    min-height: calc(100dvh - 250px);
+  }
+}
+
+@media (min-width: 1920px) {
+  .app-shell {
+    padding: 48px;
+  }
+
+  .dashboard-header,
+  .summary-section,
+  .ranking-grid,
+  .state-card {
+    width: min(100%, calc(100vw - 96px));
+    max-width: 2280px;
+  }
+
+  .ranking-grid {
+    gap: 22px;
+  }
+
+  .ranking-panel {
+    padding: 22px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

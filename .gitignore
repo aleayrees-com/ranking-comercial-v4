@@ -2,6 +2,7 @@ node_modules
 dist
 coverage
 .playwright-mcp
+vite-*.log
 .vite-*.log
 ranking-*.png
 .env
