@@ -456,113 +456,120 @@ export function App({
   }
 
   return (
-    <main className="app-shell">
-      <section className="dashboard-header" aria-labelledby="dashboard-title">
-        <div className="title-block">
-          <div className="brand-lockup">
-            <img src="/v4logo.png" alt="V4 Company" />
-            <span>Receita</span>
+    <>
+      <main className="app-shell">
+        <section className="dashboard-header" aria-labelledby="dashboard-title">
+          <div className="title-block">
+            <div className="brand-lockup">
+              <img src="/v4logo.png" alt="V4 Company" />
+              <span>Receita</span>
+            </div>
+            <p className="eyebrow">Coordenação de Receita</p>
+            <h1 id="dashboard-title">Ranking de Closer e SDR</h1>
+            <p className="header-copy">
+              Visão operacional por período, com pódio dos três primeiros,
+              ranking completo e leitura rápida para tomada de decisão.
+            </p>
           </div>
-          <p className="eyebrow">Coordenação de Receita</p>
-          <h1 id="dashboard-title">Ranking de Closer e SDR</h1>
-          <p className="header-copy">
-            Visão operacional por período, com pódio dos três primeiros, ranking
-            completo e leitura rápida para tomada de decisão.
-          </p>
-        </div>
 
-        <div className="period-control" aria-labelledby="period-control-label">
-          <span className="period-label" id="period-control-label">
-            Período
-          </span>
           <div
-            className="period-toggle-group"
-            role="group"
+            className="period-control"
             aria-labelledby="period-control-label"
           >
-            {periods.map((period) => {
-              const periodKey = getPeriodKey(period);
-              const isSelected = periodKey === getPeriodKey(selectedPeriod);
+            <span className="period-label" id="period-control-label">
+              Período
+            </span>
+            <div
+              className="period-toggle-group"
+              role="group"
+              aria-labelledby="period-control-label"
+            >
+              {periods.map((period) => {
+                const periodKey = getPeriodKey(period);
+                const isSelected = periodKey === getPeriodKey(selectedPeriod);
 
-              return (
-                <button
-                  aria-pressed={isSelected}
-                  className={
-                    isSelected ? 'period-toggle is-selected' : 'period-toggle'
-                  }
-                  key={periodKey}
-                  onClick={() => setSelectedPeriodKey(periodKey)}
-                  type="button"
-                >
-                  <CalendarDays aria-hidden="true" size={16} />
-                  <span>{period.label}</span>
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    aria-pressed={isSelected}
+                    className={
+                      isSelected ? 'period-toggle is-selected' : 'period-toggle'
+                    }
+                    key={periodKey}
+                    onClick={() => setSelectedPeriodKey(periodKey)}
+                    type="button"
+                  >
+                    <CalendarDays aria-hidden="true" size={16} />
+                    <span>{period.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {dataState.status === 'loading' ? (
-        <StateCard
-          body="Lendo a fixture local e preparando o cálculo do período."
-          icon={LoaderCircle}
-          tone="neutral"
-          title="Carregando ranking"
-        />
-      ) : null}
-
-      {dataState.status === 'error' ? (
-        <StateCard
-          body={dataState.message}
-          icon={FileWarning}
-          tone="danger"
-          title="Erro ao carregar a fonte local"
-        />
-      ) : null}
-
-      {dataState.status === 'ready' && ranking ? (
-        <>
-          <DashboardSummary
-            ranking={ranking}
-            sourceInfo={dataState.sourceInfo}
+        {dataState.status === 'loading' ? (
+          <StateCard
+            body="Lendo a fixture local e preparando o cálculo do período."
+            icon={LoaderCircle}
+            tone="neutral"
+            title="Carregando ranking"
           />
+        ) : null}
 
-          {ranking.isEmpty ? (
-            <StateCard
-              body="Não há linhas válidas para este período. Verifique se a fixture possui dados normalizados ou se todas as linhas foram rejeitadas por inconsistência."
-              icon={FileWarning}
-              tone="warning"
-              title="Período sem ranking válido"
-            />
-          ) : null}
+        {dataState.status === 'error' ? (
+          <StateCard
+            body={dataState.message}
+            icon={FileWarning}
+            tone="danger"
+            title="Erro ao carregar a fonte local"
+          />
+        ) : null}
 
-          <div className="ranking-grid">
-            <RankingPanel
-              expanded={expandedPanelKind === 'closer'}
-              entries={ranking.closers}
-              emptyLabel="Sem closers válidos"
-              investors={investors}
-              kind="closer"
-              onClose={() => setExpandedPanelKind(null)}
-              onExpand={() => setExpandedPanelKind('closer')}
-              title="Closers"
+        {dataState.status === 'ready' && ranking ? (
+          <>
+            <DashboardSummary
+              ranking={ranking}
+              sourceInfo={dataState.sourceInfo}
             />
-            <RankingPanel
-              expanded={expandedPanelKind === 'sdr'}
-              entries={ranking.sdrs}
-              emptyLabel="Sem SDRs válidos"
-              investors={investors}
-              kind="sdr"
-              onClose={() => setExpandedPanelKind(null)}
-              onExpand={() => setExpandedPanelKind('sdr')}
-              title="SDR / Pré-vendas"
-            />
-          </div>
-        </>
+
+            {ranking.isEmpty ? (
+              <StateCard
+                body="Não há linhas válidas para este período. Verifique se a fixture possui dados normalizados ou se todas as linhas foram rejeitadas por inconsistência."
+                icon={FileWarning}
+                tone="warning"
+                title="Período sem ranking válido"
+              />
+            ) : null}
+
+            <div className="ranking-grid">
+              <RankingPanel
+                expanded={expandedPanelKind === 'closer'}
+                entries={ranking.closers}
+                emptyLabel="Sem closers válidos"
+                investors={investors}
+                kind="closer"
+                onClose={() => setExpandedPanelKind(null)}
+                onExpand={() => setExpandedPanelKind('closer')}
+                title="Closers"
+              />
+              <RankingPanel
+                expanded={expandedPanelKind === 'sdr'}
+                entries={ranking.sdrs}
+                emptyLabel="Sem SDRs válidos"
+                investors={investors}
+                kind="sdr"
+                onClose={() => setExpandedPanelKind(null)}
+                onExpand={() => setExpandedPanelKind('sdr')}
+                title="SDR / Pré-vendas"
+              />
+            </div>
+          </>
+        ) : null}
+      </main>
+
+      {showToasty ? (
+        <DennerToasty expanded={expandedPanelKind !== null} />
       ) : null}
-
-      {showToasty ? <DennerToasty /> : null}
       {isToastySoundBlocked ? (
         <button
           aria-label="Ativar som do Toasty"
@@ -573,7 +580,7 @@ export function App({
           Ativar som
         </button>
       ) : null}
-    </main>
+    </>
   );
 }
 
@@ -864,9 +871,16 @@ function PodiumItem({
   );
 }
 
-function DennerToasty() {
+function DennerToasty({ expanded }: { readonly expanded: boolean }) {
   return (
-    <aside className="toasty-easter-egg" aria-label="Denner Toasty">
+    <aside
+      className={
+        expanded
+          ? 'toasty-easter-egg toasty-easter-egg--over-expanded'
+          : 'toasty-easter-egg'
+      }
+      aria-label="Denner Toasty"
+    >
       <img alt="Denner" height="693" src={TOASTY_IMAGE_SRC} width="520" />
       <strong>TOASTY!</strong>
     </aside>

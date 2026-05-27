@@ -559,6 +559,40 @@ describe('App', () => {
     expect(playMock).toHaveBeenCalledTimes(1);
   });
 
+  test('exibe Denner como overlay global quando o pódio está expandido', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-27T12:00:00.000Z'));
+    mockLiveRankingAndToastySignal();
+
+    const { container } = render(<App />);
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Expandir pódio Closers' }),
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(2_000);
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByLabelText('Denner Toasty')).not.toBeInTheDocument();
+
+    await act(async () => {
+      vi.advanceTimersByTime(2_000);
+      await Promise.resolve();
+    });
+
+    const toasty = screen.getByLabelText('Denner Toasty');
+
+    expect(toasty).toHaveClass('toasty-easter-egg--over-expanded');
+    expect(container.querySelector('main .toasty-easter-egg')).toBeNull();
+  });
+
   test('usa o PNG transparente do Denner no caminho antigo', async () => {
     vi.useFakeTimers();
 

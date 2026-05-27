@@ -969,12 +969,18 @@ tbody tr:last-child td {
   position: fixed;
   right: clamp(18px, 2.4vw, 48px);
   bottom: clamp(72px, 7dvh, 112px);
-  z-index: 90;
+  z-index: 1000;
   display: grid;
   justify-items: center;
   width: clamp(160px, 15vw, 300px);
   pointer-events: none;
   animation: toasty-pop 2800ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.toasty-easter-egg--over-expanded {
+  right: clamp(18px, 2vw, 40px);
+  bottom: clamp(36px, 4dvh, 76px);
+  width: clamp(190px, 16vw, 320px);
 }
 
 .toasty-easter-egg img {
@@ -989,7 +995,7 @@ tbody tr:last-child td {
   padding: 7px 12px;
   border: 2px solid #ffffff;
   border-radius: 4px;
-  background: var(--accent);
+  background: var(--accent, #e50000);
   color: #ffffff;
   font-size: clamp(1.2rem, 2.3vw, 2.4rem);
   font-weight: 1000;
@@ -1002,7 +1008,7 @@ tbody tr:last-child td {
   position: fixed;
   right: 18px;
   bottom: 18px;
-  z-index: 91;
+  z-index: 1001;
   padding: 9px 12px;
   border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 4px;
