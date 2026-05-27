@@ -59,6 +59,7 @@ interface RankingApiPayload {
 
 interface ToastySignalApiPayload {
   readonly id?: unknown;
+  readonly serverNow?: unknown;
   readonly triggeredAt?: unknown;
 }
 
@@ -115,6 +116,7 @@ const TOASTY_AUDIO_SRC = '/easter-eggs/denner-toasty-v2.mp3';
 const TOASTY_CONTROL_ENDPOINT = '/api/toasty';
 const TOASTY_IMAGE_SRC = '/easter-eggs/denner-toasty.png';
 const TOASTY_INTERVAL_MS = 300_000;
+const TOASTY_INITIAL_SIGNAL_MAX_AGE_MS = 10_000;
 const TOASTY_POLL_INTERVAL_MS = 2_000;
 const TOASTY_SIGNAL_MAX_AGE_MS = 120_000;
 const TOASTY_VISIBLE_MS = 5_200;
@@ -394,18 +396,31 @@ export function App({
             return;
           }
 
+          const isFreshSignal = isRecentToastySignal(
+            signal,
+            TOASTY_SIGNAL_MAX_AGE_MS,
+          );
+
           if (lastToastySignalIdRef.current === signal.id) {
             return;
           }
 
           if (lastToastySignalIdRef.current === null) {
             lastToastySignalIdRef.current = signal.id;
+
+            if (
+              signal.id !== '0' &&
+              isRecentToastySignal(signal, TOASTY_INITIAL_SIGNAL_MAX_AGE_MS)
+            ) {
+              triggerToasty();
+            }
+
             return;
           }
 
           lastToastySignalIdRef.current = signal.id;
 
-          if (signal.id !== '0' && isRecentToastySignal(signal.triggeredAt)) {
+          if (signal.id !== '0' && isFreshSignal) {
             triggerToasty();
           }
         })
@@ -1082,6 +1097,7 @@ async function loadLiveRankingData(): Promise<RankingDataState> {
 
 async function loadToastySignal(): Promise<{
   readonly id: string;
+  readonly serverNow: string | null;
   readonly triggeredAt: string | null;
 } | null> {
   const url = new URL(TOASTY_CONTROL_ENDPOINT, window.location.href);
@@ -1103,23 +1119,33 @@ async function loadToastySignal(): Promise<{
 
   return {
     id: payload.id,
+    serverNow: typeof payload.serverNow === 'string' ? payload.serverNow : null,
     triggeredAt:
       typeof payload.triggeredAt === 'string' ? payload.triggeredAt : null,
   };
 }
 
-function isRecentToastySignal(triggeredAt: string | null): boolean {
-  if (!triggeredAt) {
+function isRecentToastySignal(
+  signal: {
+    readonly serverNow: string | null;
+    readonly triggeredAt: string | null;
+  },
+  maxAgeMs: number,
+): boolean {
+  if (!signal.triggeredAt) {
     return false;
   }
 
-  const timestamp = Date.parse(triggeredAt);
+  const timestamp = Date.parse(signal.triggeredAt);
+  const referenceTimestamp = signal.serverNow
+    ? Date.parse(signal.serverNow)
+    : Date.now();
 
-  if (Number.isNaN(timestamp)) {
+  if (Number.isNaN(timestamp) || Number.isNaN(referenceTimestamp)) {
     return false;
   }
 
-  return Date.now() - timestamp <= TOASTY_SIGNAL_MAX_AGE_MS;
+  return referenceTimestamp - timestamp <= maxAgeMs;
 }
 
 function createReadyState({

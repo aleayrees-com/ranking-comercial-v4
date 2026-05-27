@@ -120,6 +120,7 @@ function mockAudio(
 
 interface MockToastySignal {
   readonly id: string;
+  readonly serverNow?: string;
   readonly triggeredAt: string | null;
 }
 
@@ -591,6 +592,58 @@ describe('App', () => {
 
     expect(toasty).toHaveClass('toasty-easter-egg--over-expanded');
     expect(container.querySelector('main .toasty-easter-egg')).toBeNull();
+  });
+
+  test('aciona comando remoto recente recebido no primeiro polling da TV', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-27T12:00:05.000Z'));
+    mockLiveRankingAndToastySignal([
+      {
+        id: 'remote-quick',
+        serverNow: '2026-05-27T12:00:05.000Z',
+        triggeredAt: '2026-05-27T12:00:00.000Z',
+      },
+    ]);
+
+    render(<App />);
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(2_000);
+      await Promise.resolve();
+    });
+
+    expect(screen.getByLabelText('Denner Toasty')).toBeInTheDocument();
+  });
+
+  test('ignora comando remoto antigo recebido no primeiro polling da TV', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-27T12:00:30.000Z'));
+    mockLiveRankingAndToastySignal([
+      {
+        id: 'remote-old',
+        serverNow: '2026-05-27T12:00:30.000Z',
+        triggeredAt: '2026-05-27T12:00:00.000Z',
+      },
+    ]);
+
+    render(<App />);
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(2_000);
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByLabelText('Denner Toasty')).not.toBeInTheDocument();
   });
 
   test('usa o PNG transparente do Denner no caminho antigo', async () => {

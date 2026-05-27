@@ -3,6 +3,10 @@ interface ToastySignal {
   readonly triggeredAt: string | null;
 }
 
+interface ToastyReadResponse extends ToastySignal {
+  readonly serverNow: string;
+}
+
 interface ToastyKvNamespace {
   get(key: string): Promise<string | null>;
   put(key: string, value: string): Promise<void>;
@@ -33,15 +37,16 @@ export async function onRequestGet({
   request,
 }: ToastyContext): Promise<Response> {
   const signal = await readSignal(env);
+  const responsePayload = createReadResponse(signal);
 
   if (new URL(request.url).searchParams.get('health') === '1') {
     return jsonResponse({
       hasKv: getKv(env) !== null,
-      signal,
+      signal: responsePayload,
     });
   }
 
-  return jsonResponse(signal);
+  return jsonResponse(responsePayload);
 }
 
 export async function onRequestPost(context: ToastyContext): Promise<Response> {
@@ -205,6 +210,13 @@ function parseSignal(rawSignal: string | null): ToastySignal | null {
   } catch {
     return null;
   }
+}
+
+function createReadResponse(signal: ToastySignal): ToastyReadResponse {
+  return {
+    ...signal,
+    serverNow: new Date().toISOString(),
+  };
 }
 
 function jsonResponse(body: unknown, status = 200): Response {

@@ -391,6 +391,7 @@ button:focus-visible {
   inset: 0;
   z-index: 50;
   width: 100vw;
+  height: 100vh;
   height: 100dvh;
   max-width: none;
   margin: 0;
@@ -772,6 +773,7 @@ button:focus-visible {
 }
 
 .ranking-panel.is-expanded .podium-list {
+  min-height: calc(100vh - 270px);
   min-height: calc(100dvh - 270px);
   gap: 18px;
   margin-bottom: 24px;
@@ -780,7 +782,7 @@ button:focus-visible {
 
 .ranking-panel.is-expanded .podium-item {
   --podium-avatar-size: 136px;
-  --podium-stage-min: clamp(360px, calc(var(--podium-height) + 24dvh), 680px);
+  --podium-stage-min: clamp(360px, calc(var(--podium-height) + 24vh), 680px);
   --podium-stage-offset: 82px;
   --podium-stage-padding-top: 122px;
   min-height: calc(var(--podium-stage-min) + var(--podium-stage-offset));
@@ -788,7 +790,7 @@ button:focus-visible {
 
 .ranking-panel.is-expanded .podium-item[data-position='1'] {
   --podium-avatar-size: 190px;
-  --podium-stage-min: clamp(520px, 70dvh, 820px);
+  --podium-stage-min: clamp(520px, 70vh, 820px);
   --podium-stage-offset: 116px;
   --podium-stage-padding-top: 180px;
   min-height: calc(var(--podium-stage-min) + var(--podium-stage-offset));
@@ -967,20 +969,27 @@ tbody tr:last-child td {
 
 .toasty-easter-egg {
   position: fixed;
+  right: 32px;
   right: clamp(18px, 2.4vw, 48px);
+  bottom: 88px;
+  bottom: clamp(72px, 7vh, 112px);
   bottom: clamp(72px, 7dvh, 112px);
-  z-index: 1000;
+  z-index: 2147483647;
   display: grid;
   justify-items: center;
+  width: 220px;
   width: clamp(160px, 15vw, 300px);
   pointer-events: none;
   animation: toasty-pop 5200ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .toasty-easter-egg--over-expanded {
-  right: clamp(18px, 3vw, 58px);
-  bottom: clamp(28px, 5dvh, 72px);
-  width: clamp(220px, 19vw, 360px);
+  top: 28vh;
+  right: 72px;
+  bottom: auto;
+  width: 230px;
+  width: clamp(220px, 19vw, 340px);
+  right: clamp(56px, 7vw, 128px);
   animation-name: toasty-pop-contained;
 }
 
@@ -1159,18 +1168,15 @@ tbody tr:last-child td {
 @keyframes toasty-pop-contained {
   0% {
     opacity: 0;
-    transform: translateY(18px) scale(0.92) rotate(3deg);
   }
 
   10%,
   84% {
     opacity: 1;
-    transform: translateY(0) scale(1) rotate(0deg);
   }
 
   100% {
     opacity: 0;
-    transform: translateY(10px) scale(0.98) rotate(2deg);
   }
 }
 
@@ -1256,6 +1262,7 @@ tbody tr:last-child td {
   }
 
   .ranking-panel.is-expanded .podium-list {
+    min-height: calc(100vh - 250px);
     min-height: calc(100dvh - 250px);
   }
 }
@@ -1316,21 +1323,21 @@ tbody tr:last-child td {
     min-height: 0;
     gap: 12px;
     margin-bottom: 16px;
-    padding-top: clamp(118px, 13dvh, 164px);
+    padding-top: clamp(118px, 13vh, 164px);
     overflow: visible;
   }
 
   .ranking-panel.is-expanded .podium-item {
     --podium-avatar-size: clamp(76px, 7vw, 108px);
-    --podium-stage-min: clamp(210px, 35dvh, 380px);
-    --podium-stage-offset: clamp(46px, 5.6dvh, 62px);
+    --podium-stage-min: clamp(210px, 35vh, 380px);
+    --podium-stage-offset: clamp(46px, 5.6vh, 62px);
     --podium-stage-padding-top: calc(var(--podium-avatar-size) * 0.86);
   }
 
   .ranking-panel.is-expanded .podium-item[data-position='1'] {
     --podium-avatar-size: clamp(106px, 9vw, 158px);
-    --podium-stage-min: clamp(270px, 46dvh, 500px);
-    --podium-stage-offset: clamp(66px, 7.5dvh, 92px);
+    --podium-stage-min: clamp(270px, 46vh, 500px);
+    --podium-stage-offset: clamp(66px, 7.5vh, 92px);
     --podium-stage-padding-top: calc(var(--podium-avatar-size) * 0.9);
   }
 
@@ -1351,7 +1358,7 @@ tbody tr:last-child td {
   }
 
   .ranking-panel.is-expanded .table-scroll {
-    max-height: clamp(112px, 24dvh, 240px);
+    max-height: clamp(112px, 24vh, 240px);
     overflow: auto;
   }
 }

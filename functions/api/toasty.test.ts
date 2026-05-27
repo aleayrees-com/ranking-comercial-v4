@@ -25,11 +25,15 @@ describe('/api/toasty', () => {
     const postResponse = await onRequestPost({ env, request });
     const postPayload = (await postResponse.json()) as { readonly id: string };
     const getResponse = await onRequestGet({ env, request });
-    const getPayload = (await getResponse.json()) as { readonly id: string };
+    const getPayload = (await getResponse.json()) as {
+      readonly id: string;
+      readonly serverNow: string;
+    };
 
     expect(postResponse.status).toBe(201);
     expect(postPayload.id).not.toBe('0');
     expect(getPayload.id).toBe(postPayload.id);
+    expect(Date.parse(getPayload.serverNow)).not.toBeNaN();
   });
 
   test('informa health do binding KV sem disparar comando', async () => {
@@ -43,11 +47,12 @@ describe('/api/toasty', () => {
     const response = await onRequestGet({ env, request });
     const payload = (await response.json()) as {
       readonly hasKv: boolean;
-      readonly signal: { readonly id: string };
+      readonly signal: { readonly id: string; readonly serverNow: string };
     };
 
     expect(payload.hasKv).toBe(true);
     expect(typeof payload.signal.id).toBe('string');
+    expect(Date.parse(payload.signal.serverNow)).not.toBeNaN();
   });
 
   test('reseta o último comando remoto sem criar novo disparo', async () => {
