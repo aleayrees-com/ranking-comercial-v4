@@ -15,4 +15,10 @@ describe('Toasty layout', () => {
     expect(baseRule).toContain('animation: toasty-pop-contained');
     expect(normalAnimation).not.toContain('translateX(108%)');
   });
+
+  test('keeps the expanded podium crown below the header on short TVs', () => {
+    const css = readFileSync(resolve(repoRoot, 'src/styles.css'), 'utf8');
+
+    expect(css).toContain('padding-top: clamp(144px, 18vh, 188px)');
+  });
 });

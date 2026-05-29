@@ -763,6 +763,8 @@ describe('App', () => {
       'src',
       '/easter-eggs/denner-toasty-wide-eyed.png',
     );
+    expect(screen.getByAltText('Denner')).toHaveAttribute('loading', 'eager');
+    expect(screen.getByAltText('Denner')).toHaveAttribute('decoding', 'sync');
   });
 
   test('exibe botão para ativar som quando o navegador bloqueia autoplay', async () => {

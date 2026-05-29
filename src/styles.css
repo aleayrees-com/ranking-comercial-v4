@@ -1347,7 +1347,7 @@ tbody tr:last-child td {
     min-height: 0;
     gap: 12px;
     margin-bottom: 16px;
-    padding-top: clamp(118px, 13vh, 164px);
+    padding-top: clamp(144px, 18vh, 188px);
     overflow: visible;
   }
 

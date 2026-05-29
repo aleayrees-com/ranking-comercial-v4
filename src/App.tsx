@@ -1005,7 +1005,14 @@ function DennerToasty({
       }
       aria-label={effectConfig.ariaLabel}
     >
-      <img alt="Denner" height="693" src={TOASTY_IMAGE_SRC} width="520" />
+      <img
+        alt="Denner"
+        decoding="sync"
+        height="693"
+        loading="eager"
+        src={TOASTY_IMAGE_SRC}
+        width="520"
+      />
       <strong>{effectConfig.label}</strong>
     </aside>
   );
