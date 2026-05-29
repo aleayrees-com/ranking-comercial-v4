@@ -570,6 +570,16 @@ export function App({
 
   return (
     <>
+      <img
+        alt=""
+        aria-hidden="true"
+        className="toasty-image-preload"
+        decoding="sync"
+        height="1"
+        loading="eager"
+        src={TOASTY_IMAGE_SRC}
+        width="1"
+      />
       <main className="app-shell">
         <section className="dashboard-header" aria-labelledby="dashboard-title">
           <div className="title-block">

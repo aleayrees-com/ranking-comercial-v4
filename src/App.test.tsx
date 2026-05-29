@@ -767,6 +767,19 @@ describe('App', () => {
     expect(screen.getByAltText('Denner')).toHaveAttribute('decoding', 'sync');
   });
 
+  test('precarrega a imagem do Denner assim que o ranking abre', () => {
+    const { container } = render(
+      <App initialRows={rows} initialPeriods={periods} />,
+    );
+    const preloadImage = container.querySelector('.toasty-image-preload');
+
+    expect(preloadImage).toHaveAttribute(
+      'src',
+      '/easter-eggs/denner-toasty-tv-safe-20260529.png',
+    );
+    expect(preloadImage).toHaveAttribute('aria-hidden', 'true');
+  });
+
   test('exibe botão para ativar som quando o navegador bloqueia autoplay', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-27T12:00:00.000Z'));
