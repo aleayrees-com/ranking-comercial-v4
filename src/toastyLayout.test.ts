@@ -21,4 +21,12 @@ describe('Toasty layout', () => {
 
     expect(css).toContain('padding-top: clamp(144px, 18vh, 188px)');
   });
+
+  test('avoids CSS filters on the Denner image for TV browser compatibility', () => {
+    const css = readFileSync(resolve(repoRoot, 'src/styles.css'), 'utf8');
+    const imageRule =
+      css.match(/\.toasty-easter-egg img\s*\{[^}]+\}/)?.[0] ?? '';
+
+    expect(imageRule).not.toContain('filter:');
+  });
 });

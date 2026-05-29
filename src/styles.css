@@ -1000,7 +1000,6 @@ tbody tr:last-child td {
   display: block;
   width: 100%;
   height: auto;
-  filter: drop-shadow(0 24px 28px rgba(0, 0, 0, 0.62));
 }
 
 .toasty-easter-egg strong {

@@ -662,7 +662,7 @@ describe('App', () => {
     expect(screen.getByText('RAPAZ!')).toBeInTheDocument();
     expect(screen.getByAltText('Denner')).toHaveAttribute(
       'src',
-      '/easter-eggs/denner-toasty-wide-eyed.png',
+      '/easter-eggs/denner-toasty-tv-safe-20260529.png',
     );
     expect(playMock).toHaveBeenCalledTimes(1);
     expect(instances[0]?.src).toBe('/easter-eggs/rapaz-xaropinho.mp3');
@@ -712,7 +712,7 @@ describe('App', () => {
       expect(screen.getByText(label)).toBeInTheDocument();
       expect(screen.getByAltText('Denner')).toHaveAttribute(
         'src',
-        '/easter-eggs/denner-toasty-wide-eyed.png',
+        '/easter-eggs/denner-toasty-tv-safe-20260529.png',
       );
       expect(
         fetchMock.mock.calls.some((call) =>
@@ -761,7 +761,7 @@ describe('App', () => {
 
     expect(screen.getByAltText('Denner')).toHaveAttribute(
       'src',
-      '/easter-eggs/denner-toasty-wide-eyed.png',
+      '/easter-eggs/denner-toasty-tv-safe-20260529.png',
     );
     expect(screen.getByAltText('Denner')).toHaveAttribute('loading', 'eager');
     expect(screen.getByAltText('Denner')).toHaveAttribute('decoding', 'sync');
