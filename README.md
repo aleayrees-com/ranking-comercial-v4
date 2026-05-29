@@ -49,6 +49,10 @@ para a aba/janela. Nao e necessario dar F5 na TV ou no navegador.
   Toasty.
 - Botao `Soltar Rapaz`: mostra o Denner com placa `RAPAZ!` e toca o audio
   Rapaz.
+- Botao `Soltar UUII`: mostra o Denner com placa `UUII!` e toca o audio
+  UUII.
+- Botao `Soltar Ele Gosta`: mostra o Denner com placa `ELE GOSTA!` e toca o
+  audio Ele Gosta.
 - A TV consulta `GET /api/toasty` a cada 2 segundos e dispara o easter egg
   quando encontra um comando recente.
 

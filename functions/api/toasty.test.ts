@@ -46,13 +46,16 @@ describe('/api/toasty', () => {
         method: 'POST',
       },
     );
+    const getRequest = new Request(
+      'https://rank.v4alfradique.com/api/toasty?effects=1',
+    );
 
     const postResponse = await onRequestPost({ env, request });
     const postPayload = (await postResponse.json()) as {
       readonly effect: string;
       readonly id: string;
     };
-    const getResponse = await onRequestGet({ env, request });
+    const getResponse = await onRequestGet({ env, request: getRequest });
     const getPayload = (await getResponse.json()) as {
       readonly effect: string;
       readonly id: string;
@@ -65,6 +68,91 @@ describe('/api/toasty', () => {
       id: postPayload.id,
     });
   });
+
+  test.each(['uuii', 'ele-gosta'])(
+    'registra comando remoto %s pelo KV',
+    async (effect) => {
+      const env = {
+        TOASTY_KV: createKv(),
+      };
+      const request = new Request(
+        `https://rank.v4alfradique.com/api/toasty?effect=${effect}`,
+        {
+          method: 'POST',
+        },
+      );
+      const getRequest = new Request(
+        'https://rank.v4alfradique.com/api/toasty?effects=1',
+      );
+
+      const postResponse = await onRequestPost({ env, request });
+      const postPayload = (await postResponse.json()) as {
+        readonly effect: string;
+        readonly id: string;
+      };
+      const getResponse = await onRequestGet({ env, request: getRequest });
+      const getPayload = (await getResponse.json()) as {
+        readonly effect: string;
+        readonly id: string;
+      };
+
+      expect(postResponse.status).toBe(201);
+      expect(postPayload.effect).toBe(effect);
+      expect(getPayload).toMatchObject({
+        effect,
+        id: postPayload.id,
+      });
+    },
+  );
+
+  test.each(['uuii', 'ele-gosta'])(
+    'oculta comando %s para clientes antigos',
+    async (effect) => {
+      const env = {
+        TOASTY_KV: createKv(),
+      };
+      const postRequest = new Request(
+        `https://rank.v4alfradique.com/api/toasty?effect=${effect}`,
+        {
+          method: 'POST',
+        },
+      );
+      const legacyRequest = new Request(
+        'https://rank.v4alfradique.com/api/toasty?cachebust=1',
+      );
+      const supportedRequest = new Request(
+        'https://rank.v4alfradique.com/api/toasty?effects=1&cachebust=1',
+      );
+
+      await onRequestPost({ env, request: postRequest });
+
+      const legacyResponse = await onRequestGet({
+        env,
+        request: legacyRequest,
+      });
+      const legacyPayload = (await legacyResponse.json()) as {
+        readonly effect: string;
+        readonly id: string;
+      };
+      const supportedResponse = await onRequestGet({
+        env,
+        request: supportedRequest,
+      });
+      const supportedPayload = (await supportedResponse.json()) as {
+        readonly effect: string;
+        readonly id: string;
+      };
+
+      expect(legacyPayload).toMatchObject({
+        effect: 'toasty',
+        id: '0',
+      });
+      expect(supportedPayload).toMatchObject({
+        effect,
+      });
+      expect(supportedPayload.id).not.toBe('0');
+    },
+  );
 
   test('informa health do binding KV sem disparar comando', async () => {
     const env = {

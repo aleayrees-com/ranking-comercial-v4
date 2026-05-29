@@ -1,4 +1,6 @@
-type ToastyEffect = 'rapaz' | 'toasty';
+const TOASTY_EFFECTS = ['ele-gosta', 'rapaz', 'toasty', 'uuii'] as const;
+
+type ToastyEffect = (typeof TOASTY_EFFECTS)[number];
 
 interface ToastySignal {
   readonly effect: ToastyEffect;
@@ -40,13 +42,16 @@ export async function onRequestGet({
   env,
   request,
 }: ToastyContext): Promise<Response> {
+  const url = new URL(request.url);
   const signal = await readSignal(env);
-  const responsePayload = createReadResponse(signal);
+  const responsePayload = createReadResponse(
+    getClientCompatibleSignal(signal, url),
+  );
 
-  if (new URL(request.url).searchParams.get('health') === '1') {
+  if (url.searchParams.get('health') === '1') {
     return jsonResponse({
       hasKv: getKv(env) !== null,
-      signal: responsePayload,
+      signal: createReadResponse(signal),
     });
   }
 
@@ -219,7 +224,20 @@ function parseSignal(rawSignal: string | null): ToastySignal | null {
 }
 
 function parseEffect(effect: unknown): ToastyEffect {
-  return effect === 'rapaz' ? 'rapaz' : 'toasty';
+  return TOASTY_EFFECTS.includes(effect as ToastyEffect)
+    ? (effect as ToastyEffect)
+    : 'toasty';
+}
+
+function getClientCompatibleSignal(
+  signal: ToastySignal,
+  url: URL,
+): ToastySignal {
+  if (signal.effect === 'toasty' || url.searchParams.get('effects') === '1') {
+    return signal;
+  }
+
+  return DEFAULT_SIGNAL;
 }
 
 function createReadResponse(signal: ToastySignal): ToastyReadResponse {

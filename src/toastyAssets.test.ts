@@ -42,4 +42,14 @@ describe('Toasty assets', () => {
     expect(existsSync(assetPath)).toBe(true);
     expect(readFileSync(assetPath).length).toBeGreaterThan(0);
   });
+
+  test.each([
+    'public/easter-eggs/rodrigo-faro-uuii.mp3',
+    'public/easter-eggs/rodrigo-faro-ele-gosta.mp3',
+  ])('includes audio effect %s', (asset) => {
+    const assetPath = resolve(repoRoot, asset);
+
+    expect(existsSync(assetPath)).toBe(true);
+    expect(readFileSync(assetPath).length).toBeGreaterThan(0);
+  });
 });

@@ -89,11 +89,19 @@ type RankingDataState =
     };
 
 type RankingKind = 'closer' | 'sdr';
-type RemoteEffect = 'rapaz' | 'toasty';
+type RemoteEffect = 'ele-gosta' | 'rapaz' | 'toasty' | 'uuii';
 type ToastyControlState = 'idle' | 'sending' | 'sent' | 'error';
 type ToastyTriggerOptions = {
   readonly shouldPlaySound?: boolean;
 };
+
+interface RemoteEffectConfig {
+  readonly ariaLabel: string;
+  readonly audioSrc: string;
+  readonly buttonLabel: string;
+  readonly label: string;
+  readonly sentMessage: string;
+}
 
 type PodiumItemStyle = CSSProperties & {
   readonly '--podium-fill': string;
@@ -114,10 +122,12 @@ const fixtureModules = (
 
 const LIVE_RANKING_ENDPOINT = '/api/ranking';
 const LIVE_REFRESH_INTERVAL_MS = 10_000;
+const ELE_GOSTA_AUDIO_SRC = '/easter-eggs/rodrigo-faro-ele-gosta.mp3';
 const RAPAZ_AUDIO_SRC = '/easter-eggs/rapaz-xaropinho.mp3';
 const TOASTY_AUDIO_SRC = '/easter-eggs/denner-toasty-v2.mp3';
 const TOASTY_CONTROL_ENDPOINT = '/api/toasty';
 const TOASTY_IMAGE_SRC = '/easter-eggs/denner-toasty-wide-eyed.png';
+const UUII_AUDIO_SRC = '/easter-eggs/rodrigo-faro-uuii.mp3';
 const TOASTY_INTERVAL_MS = 300_000;
 const TOASTY_INITIAL_SIGNAL_MAX_AGE_MS = 10_000;
 const TOASTY_POLL_INTERVAL_MS = 2_000;
@@ -128,6 +138,37 @@ const PODIUM_HEIGHT_BY_POSITION = {
   2: 208,
   3: 170,
 } as const;
+const REMOTE_EFFECTS = ['toasty', 'rapaz', 'uuii', 'ele-gosta'] as const;
+const REMOTE_EFFECT_CONFIG = {
+  'ele-gosta': {
+    ariaLabel: 'Denner Ele Gosta',
+    audioSrc: ELE_GOSTA_AUDIO_SRC,
+    buttonLabel: 'Soltar Ele Gosta',
+    label: 'ELE GOSTA!',
+    sentMessage: 'Comando enviado. O Denner Ele Gosta vai aparecer na TV.',
+  },
+  rapaz: {
+    ariaLabel: 'Denner Rapaz',
+    audioSrc: RAPAZ_AUDIO_SRC,
+    buttonLabel: 'Soltar Rapaz',
+    label: 'RAPAZ!',
+    sentMessage: 'Comando enviado. O Denner Rapaz vai aparecer na TV.',
+  },
+  toasty: {
+    ariaLabel: 'Denner Toasty',
+    audioSrc: TOASTY_AUDIO_SRC,
+    buttonLabel: 'Soltar Toasty',
+    label: 'TOASTY!',
+    sentMessage: 'Comando enviado. O Denner vai aparecer na TV.',
+  },
+  uuii: {
+    ariaLabel: 'Denner UUII',
+    audioSrc: UUII_AUDIO_SRC,
+    buttonLabel: 'Soltar UUII',
+    label: 'UUII!',
+    sentMessage: 'Comando enviado. O Denner UUII vai aparecer na TV.',
+  },
+} as const satisfies Record<RemoteEffect, RemoteEffectConfig>;
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
@@ -197,8 +238,10 @@ export function App({
   const blockedEffectRef = useRef<RemoteEffect>('toasty');
   const effectAudioRefs = useRef<Record<RemoteEffect, HTMLAudioElement | null>>(
     {
+      'ele-gosta': null,
       rapaz: null,
       toasty: null,
+      uuii: null,
     },
   );
 
@@ -231,11 +274,10 @@ export function App({
   }, [dataState, selectedPeriod]);
 
   const getEffectAudio = useCallback((effect: RemoteEffect) => {
-    const audioSrc = effect === 'rapaz' ? RAPAZ_AUDIO_SRC : TOASTY_AUDIO_SRC;
     let audio = effectAudioRefs.current[effect];
 
     if (!audio) {
-      audio = new Audio(audioSrc);
+      audio = new Audio(REMOTE_EFFECT_CONFIG[effect].audioSrc);
       audio.preload = 'auto';
       audio.volume = 0.9;
       effectAudioRefs.current[effect] = audio;
@@ -278,13 +320,18 @@ export function App({
     [playEffectSound],
   );
 
-  const triggerToasty = useCallback(
-    ({ shouldPlaySound = true }: ToastyTriggerOptions = {}) => {
-      setVisibleEffect('toasty');
-      stopEffectSound('rapaz');
+  const triggerEffect = useCallback(
+    (
+      effect: RemoteEffect,
+      { shouldPlaySound = true }: ToastyTriggerOptions = {},
+    ) => {
+      setVisibleEffect(effect);
+      REMOTE_EFFECTS.filter((nextEffect) => nextEffect !== effect).forEach(
+        stopEffectSound,
+      );
 
       if (shouldPlaySound) {
-        void playEffectSound('toasty');
+        void playEffectSound(effect);
       }
 
       if (hideToastyTimeoutRef.current !== undefined) {
@@ -293,39 +340,25 @@ export function App({
 
       hideToastyTimeoutRef.current = window.setTimeout(() => {
         setVisibleEffect(null);
-        stopEffectSound('toasty');
+        stopEffectSound(effect);
         hideToastyTimeoutRef.current = undefined;
       }, TOASTY_VISIBLE_MS);
     },
     [playEffectSound, stopEffectSound],
   );
 
-  const triggerRapaz = useCallback(() => {
-    setVisibleEffect('rapaz');
-    stopEffectSound('toasty');
-    void playEffectSound('rapaz');
-
-    if (hideToastyTimeoutRef.current !== undefined) {
-      window.clearTimeout(hideToastyTimeoutRef.current);
-    }
-
-    hideToastyTimeoutRef.current = window.setTimeout(() => {
-      setVisibleEffect(null);
-      stopEffectSound('rapaz');
-      hideToastyTimeoutRef.current = undefined;
-    }, TOASTY_VISIBLE_MS);
-  }, [playEffectSound, stopEffectSound]);
+  const triggerToasty = useCallback(
+    (options?: ToastyTriggerOptions) => {
+      triggerEffect('toasty', options);
+    },
+    [triggerEffect],
+  );
 
   const triggerRemoteEffect = useCallback(
     (effect: RemoteEffect) => {
-      if (effect === 'rapaz') {
-        triggerRapaz();
-        return;
-      }
-
-      triggerToasty();
+      triggerEffect(effect);
     },
-    [triggerRapaz, triggerToasty],
+    [triggerEffect],
   );
 
   const triggerRemoteControlEffect = useCallback(
@@ -961,7 +994,7 @@ function DennerToasty({
   readonly effect: RemoteEffect;
   readonly expanded: boolean;
 }) {
-  const label = effect === 'rapaz' ? 'RAPAZ!' : 'TOASTY!';
+  const effectConfig = REMOTE_EFFECT_CONFIG[effect];
 
   return (
     <aside
@@ -970,10 +1003,10 @@ function DennerToasty({
           ? 'toasty-easter-egg toasty-easter-egg--over-expanded'
           : 'toasty-easter-egg'
       }
-      aria-label={effect === 'rapaz' ? 'Denner Rapaz' : 'Denner Toasty'}
+      aria-label={effectConfig.ariaLabel}
     >
       <img alt="Denner" height="693" src={TOASTY_IMAGE_SRC} width="520" />
-      <strong>{label}</strong>
+      <strong>{effectConfig.label}</strong>
     </aside>
   );
 }
@@ -991,10 +1024,7 @@ function ToastyControlPanel({
     error: 'Não consegui acionar. Tenta de novo.',
     idle: 'Pronto para acionar na tela do ranking.',
     sending: 'Enviando comando...',
-    sent:
-      lastSentEffect === 'rapaz'
-        ? 'Comando enviado. O Denner Rapaz vai aparecer na TV.'
-        : 'Comando enviado. O Denner vai aparecer na TV.',
+    sent: REMOTE_EFFECT_CONFIG[lastSentEffect].sentMessage,
   } satisfies Record<ToastyControlState, string>;
 
   return (
@@ -1004,22 +1034,21 @@ function ToastyControlPanel({
         <p className="eyebrow">Controle remoto</p>
         <h1 id="control-title">Efeitos da TV</h1>
         <div className="control-actions">
-          <button
-            className="control-trigger"
-            disabled={status === 'sending'}
-            onClick={() => void onTrigger('toasty')}
-            type="button"
-          >
-            Soltar Toasty
-          </button>
-          <button
-            className="control-trigger control-trigger--secondary"
-            disabled={status === 'sending'}
-            onClick={() => void onTrigger('rapaz')}
-            type="button"
-          >
-            Soltar Rapaz
-          </button>
+          {REMOTE_EFFECTS.map((effect, index) => (
+            <button
+              className={
+                index === 0
+                  ? 'control-trigger'
+                  : 'control-trigger control-trigger--secondary'
+              }
+              disabled={status === 'sending'}
+              key={effect}
+              onClick={() => void onTrigger(effect)}
+              type="button"
+            >
+              {REMOTE_EFFECT_CONFIG[effect].buttonLabel}
+            </button>
+          ))}
         </div>
         <p className={`control-status control-status--${status}`}>
           {statusLabel[status]}
@@ -1193,6 +1222,7 @@ async function loadToastySignal(): Promise<{
   readonly triggeredAt: string | null;
 } | null> {
   const url = new URL(TOASTY_CONTROL_ENDPOINT, window.location.href);
+  url.searchParams.set('effects', '1');
   url.searchParams.set('cachebust', String(Date.now()));
 
   const response = await fetch(url, {
@@ -1219,7 +1249,9 @@ async function loadToastySignal(): Promise<{
 }
 
 function parseRemoteEffect(effect: unknown): RemoteEffect {
-  return effect === 'rapaz' ? 'rapaz' : 'toasty';
+  return REMOTE_EFFECTS.includes(effect as RemoteEffect)
+    ? (effect as RemoteEffect)
+    : 'toasty';
 }
 
 function isRecentToastySignal(

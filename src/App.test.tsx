@@ -668,6 +668,62 @@ describe('App', () => {
     expect(instances[0]?.src).toBe('/easter-eggs/rapaz-xaropinho.mp3');
   });
 
+  test.each([
+    {
+      ariaLabel: 'Denner UUII',
+      audioSrc: '/easter-eggs/rodrigo-faro-uuii.mp3',
+      effect: 'uuii',
+      label: 'UUII!',
+    },
+    {
+      ariaLabel: 'Denner Ele Gosta',
+      audioSrc: '/easter-eggs/rodrigo-faro-ele-gosta.mp3',
+      effect: 'ele-gosta',
+      label: 'ELE GOSTA!',
+    },
+  ])(
+    'aciona Denner $label remoto com áudio e placa corretos',
+    async ({ ariaLabel, audioSrc, effect, label }) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-05-27T12:00:05.000Z'));
+      const { instances, playMock } = mockAudio();
+      const fetchMock = mockLiveRankingAndToastySignal([
+        {
+          effect,
+          id: `remote-${effect}`,
+          serverNow: '2026-05-27T12:00:05.000Z',
+          triggeredAt: '2026-05-27T12:00:00.000Z',
+        },
+      ]);
+
+      render(<App />);
+
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(2_000);
+        await Promise.resolve();
+      });
+
+      expect(screen.getByLabelText(ariaLabel)).toBeInTheDocument();
+      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(screen.getByAltText('Denner')).toHaveAttribute(
+        'src',
+        '/easter-eggs/denner-toasty-wide-eyed.png',
+      );
+      expect(
+        fetchMock.mock.calls.some((call) =>
+          String(call[0]).includes('/api/toasty?effects=1'),
+        ),
+      ).toBe(true);
+      expect(playMock).toHaveBeenCalledTimes(1);
+      expect(instances[0]?.src).toBe(audioSrc);
+    },
+  );
+
   test('ignora comando remoto antigo recebido no primeiro polling da TV', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-27T12:00:30.000Z'));
@@ -811,6 +867,43 @@ describe('App', () => {
       ),
     ).toBeInTheDocument();
   });
+
+  test.each([
+    {
+      button: 'Soltar UUII',
+      effect: 'uuii',
+      message: 'Comando enviado. O Denner UUII vai aparecer na TV.',
+    },
+    {
+      button: 'Soltar Ele Gosta',
+      effect: 'ele-gosta',
+      message: 'Comando enviado. O Denner Ele Gosta vai aparecer na TV.',
+    },
+  ])(
+    'envia comando remoto $button pela tela de controle',
+    async ({ button, effect, message }) => {
+      window.history.pushState({}, '', '/?control=toasty&key=controle-v4');
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ effect, id: `remote-${effect}` }), {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          status: 201,
+        }),
+      );
+      const user = userEvent.setup();
+
+      vi.stubGlobal('fetch', fetchMock);
+
+      render(<App initialRows={rows} initialPeriods={periods} />);
+
+      await user.click(screen.getByRole('button', { name: button }));
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(String(fetchMock.mock.calls[0][0])).toContain(`effect=${effect}`);
+      expect(await screen.findByText(message)).toBeInTheDocument();
+    },
+  );
 
   test('renderiza bases de pódio com metais por posição', () => {
     render(<App initialRows={rows} initialPeriods={periods} />);
