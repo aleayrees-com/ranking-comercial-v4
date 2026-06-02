@@ -194,6 +194,183 @@ describe('parseGoogleSheetRankingCsv', () => {
       }),
     ]);
   });
+
+  test('maps June pre-sales members from the operational summary', () => {
+    const csv = createCsv([
+      row({
+        200: 'META',
+        201: 'Macedo Lucas Rodrigues',
+        202: 'Lucas Vieira',
+        203: 'Wilson Junior',
+        204: 'Emanuella',
+        205: 'Pedro Paulo',
+        206: 'Matheus Caruzo',
+        207: 'XPTO 1',
+        211: 'Total Time',
+      }),
+      row({
+        200: 'REALIZADO',
+        201: '1',
+        202: '2',
+        203: '3',
+        204: '4',
+        205: '5',
+        206: '6',
+        207: '99',
+        211: '21',
+      }),
+    ]);
+
+    const result = parseGoogleSheetRankingCsv(csv, {
+      gid: '1368144463',
+      title: 'CDR JUNHO/26',
+    });
+
+    expect(result.sourceSpreadsheet.sheet).toBe('CDR JUNHO/26');
+    expect(result.periods).toEqual([
+      {
+        label: 'Junho/2026',
+        start: '2026-06-01',
+        end: '2026-06-30',
+      },
+    ]);
+    expect(result.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'sdr',
+          memberId: 'gisela-emanuella-candido-costa-silva',
+          memberName: 'Emanuella',
+          meetingsHeld: 4,
+        }),
+        expect.objectContaining({
+          role: 'sdr',
+          memberId: 'pedro-paulo-dias-da-fonseca',
+          memberName: 'Pedro Paulo',
+          meetingsHeld: 5,
+        }),
+        expect.objectContaining({
+          role: 'sdr',
+          memberId: 'matheus-caruzo-monteiro-goncalves',
+          memberName: 'Matheus Caruzo',
+          meetingsHeld: 6,
+        }),
+      ]),
+    );
+    expect(result.rows).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          memberName: 'XPTO 1',
+        }),
+      ]),
+    );
+  });
+
+  test('keeps known pre-sales members with zero meetings when summary cells are blank', () => {
+    const csv = createCsv([
+      row({
+        200: 'META',
+        201: 'Lucas Vieira',
+        202: 'Wilson Junior',
+        203: 'Macedo Lucas Rodrigues',
+        204: 'Emanuella',
+        205: 'Pedro Paulo',
+        211: 'Total Time',
+      }),
+      row({
+        200: 'REALIZADO',
+        201: '2',
+        202: '1',
+        203: '',
+        204: '',
+        205: '',
+        211: '3',
+      }),
+    ]);
+
+    const result = parseGoogleSheetRankingCsv(csv, {
+      gid: '1368144463',
+      title: 'CDR JUNHO/26',
+    });
+
+    expect(result.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'sdr',
+          memberId: 'gisela-emanuella-candido-costa-silva',
+          memberName: 'Emanuella',
+          meetingsHeld: 0,
+        }),
+        expect.objectContaining({
+          role: 'sdr',
+          memberId: 'pedro-paulo-dias-da-fonseca',
+          memberName: 'Pedro Paulo',
+          meetingsHeld: 0,
+        }),
+      ]),
+    );
+    expect(result.rows).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'sdr',
+          memberId: 'lucas-macedo',
+        }),
+      ]),
+    );
+  });
+
+  test('excludes legacy Lucas Macedo zero row from old happened-meetings summary', () => {
+    const csv = createCsv([
+      row({ 0: 'DATA INÍCIO:', 1: '01/06/2026' }),
+      row({ 0: 'DATA FIM:', 1: '30/06/2026' }),
+      row({
+        6: 'DATA DA COMPRA',
+        13: 'VALOR',
+        14: 'STATUS',
+        15: 'MRR',
+        17: 'DATA DE\nFECHAMENTO',
+        27: 'ACONTECIDA',
+        29: 'SDR',
+        30: 'CLOSER',
+        31: 'PRODUTO\nVENDIDO',
+      }),
+      row({
+        1: 'Wilson Junior',
+        2: 'Lucas Vieira',
+        3: 'Macedo Lucas Rodrigues',
+        4: 'Emanuella',
+      }),
+      row({ 0: 'LEADS', 1: '2', 2: '2', 3: '0', 4: '1' }),
+      row({ 0: 'ACONTECIDAS', 1: '1', 2: '1', 3: '0', 4: '0' }),
+    ]);
+
+    const result = parseGoogleSheetRankingCsv(csv, {
+      gid: '1368144463',
+      title: 'CDR JUNHO/26',
+    });
+
+    expect(result.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'sdr',
+          memberId: 'wilson-de-carvalho-junior',
+          meetingsHeld: 1,
+        }),
+        expect.objectContaining({
+          role: 'sdr',
+          memberId: 'gisela-emanuella-candido-costa-silva',
+          meetingsHeld: 0,
+        }),
+      ]),
+    );
+    expect(result.rows).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'sdr',
+          memberId: 'lucas-macedo',
+        }),
+      ]),
+    );
+  });
 });
 
 function row(cells: Record<number, string>): readonly string[] {

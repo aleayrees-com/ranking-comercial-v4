@@ -28,15 +28,17 @@ O `npm run dev` inicia o Vite em `127.0.0.1`; o terminal informa a porta disponi
 ## Fonte dos dados
 
 - Planilha: `Controle de Resultados | Alfradique & Co RJ`
-- Aba mapeada: `CDR MAIO/26`
-- GID: `1481288268`
+- Abas mapeadas automaticamente: qualquer aba no padrão `CDR MÊS/AA`
+- Aba mais recente atual: `CDR JUNHO/26`
+- GID mais recente atual: `1368144463`
 - Timezone: `America/Sao_Paulo`
-- URL: `https://docs.google.com/spreadsheets/d/1iqFf2dbfsG_tl2FB8TrPsBfjO3xkvQYrnvqheUPY9KE/edit?gid=1481288268#gid=1481288268`
+- URL: `https://docs.google.com/spreadsheets/d/1iqFf2dbfsG_tl2FB8TrPsBfjO3xkvQYrnvqheUPY9KE/edit?gid=1368144463#gid=1368144463`
 
-A Function `functions/api/ranking.ts` busca o CSV publico da aba, sem cache, e
-normaliza os blocos oficiais de `REALIZADO`, `Vendas` e `PRÉ VENDAS`. A fixture
-local fica em `src/data/rankingFixture.ts` e preserva a rastreabilidade da origem.
-O contrato esperado esta em `docs/source-contract.md`.
+A Function `functions/api/ranking.ts` descobre as abas mensais publicas, ignora
+copias e abas fora do padrao, busca os CSVs sem cache e normaliza os blocos
+oficiais de `REALIZADO`, `Vendas` e `PRÉ VENDAS`. A fixture local fica em
+`src/data/rankingFixture.ts` e preserva a rastreabilidade da origem. O contrato
+esperado esta em `docs/source-contract.md`.
 
 O site atualiza os dados automaticamente a cada 10 segundos e tambem ao voltar
 para a aba/janela. Nao e necessario dar F5 na TV ou no navegador.

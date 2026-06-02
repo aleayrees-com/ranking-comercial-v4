@@ -28,6 +28,7 @@ const periods: readonly PeriodFilter[] = [
     label: 'Junho/2026',
   },
 ];
+const mayAprilPeriods: readonly PeriodFilter[] = [periods[0], periods[1]];
 
 const rows: readonly RawRankingRow[] = [
   {
@@ -91,6 +92,50 @@ const rows: readonly RawRankingRow[] = [
   },
 ];
 
+const juneRows: readonly RawRankingRow[] = [
+  {
+    period: '2026-06-02',
+    role: 'sdr',
+    memberId: 'sdr-emanuella',
+    memberName: 'Emanuella',
+    meetingsHeld: 4,
+    sourceChannel: 'Lead Broker',
+  },
+  {
+    period: '2026-06-02',
+    role: 'sdr',
+    memberId: 'sdr-pedro-paulo',
+    memberName: 'Pedro Paulo',
+    meetingsHeld: 3,
+    sourceChannel: 'Lead Broker',
+  },
+  {
+    period: '2026-06-02',
+    role: 'sdr',
+    memberId: 'sdr-matheus-caruzo',
+    memberName: 'Matheus Caruzo',
+    meetingsHeld: 2,
+    sourceChannel: 'Lead Broker',
+  },
+  {
+    period: '2026-06-02',
+    role: 'sdr',
+    memberId: 'sdr-wilson-june',
+    memberName: 'Wilson Junior',
+    meetingsHeld: 1,
+    sourceChannel: 'Lead Broker',
+  },
+  {
+    period: '2026-06-02',
+    role: 'sdr',
+    memberId: 'sdr-lucas-june',
+    memberName: 'Lucas Moura',
+    meetingsHeld: 1,
+    sourceChannel: 'Lead Broker',
+  },
+];
+const rowsWithJune: readonly RawRankingRow[] = [...rows, ...juneRows];
+
 function mockAudio(
   playMock = vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
 ) {
@@ -143,7 +188,7 @@ function mockLiveRankingAndToastySignal(
 
     if (url.includes('/api/ranking')) {
       return Promise.resolve(
-        new Response(JSON.stringify({ periodFilters: periods, rows }), {
+        new Response(JSON.stringify({ periodFilters: mayAprilPeriods, rows }), {
           headers: {
             'Content-Type': 'application/json',
           },
@@ -207,7 +252,7 @@ describe('App', () => {
             imagePath: '/investors/alexandre-ayres.png',
           },
         ]}
-        initialPeriods={periods}
+        initialPeriods={mayAprilPeriods}
         initialRows={rows}
       />,
     );
@@ -228,7 +273,7 @@ describe('App', () => {
 
   test('referencia Lucas Vieira da planilha como alias de Lucas Moura', () => {
     const { container } = render(
-      <App initialRows={rows} initialPeriods={periods} />,
+      <App initialRows={rows} initialPeriods={mayAprilPeriods} />,
     );
 
     expect(
@@ -237,7 +282,7 @@ describe('App', () => {
   });
 
   test('renderiza os nomes calculados no ranking de closers e SDRs', () => {
-    render(<App initialRows={rows} initialPeriods={periods} />);
+    render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
     expect(screen.getAllByText('Macedo Lucas Rodrigues')).not.toHaveLength(0);
     expect(screen.getAllByText('Wilson Junior')).not.toHaveLength(0);
@@ -245,9 +290,72 @@ describe('App', () => {
     expect(screen.getAllByText('29 reuniões')).not.toHaveLength(0);
   });
 
+  test('abre o mês mais recente retornado pela API em tempo real', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            periods: [periods[0], periods[2]],
+            rows: rowsWithJune,
+            sourceSpreadsheet: {
+              title: 'Planilha em tempo real',
+              sheet: 'CDR JUNHO/26 + 1 mês anterior',
+            },
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            status: 200,
+          },
+        ),
+      ),
+    );
+
+    render(<App />);
+
+    expect(await screen.findByText('Junho/2026')).toBeInTheDocument();
+    expect(await screen.findAllByText('Emanuella')).not.toHaveLength(0);
+    expect(
+      screen.queryByText('Macedo Lucas Rodrigues'),
+    ).not.toBeInTheDocument();
+  });
+
+  test('respeita período mensal informado na URL', () => {
+    window.history.pushState({}, '', '/?period=2026-05');
+
+    render(
+      <App
+        initialRows={rowsWithJune}
+        initialPeriods={[periods[2], periods[0]]}
+      />,
+    );
+
+    expect(screen.getAllByText('Maio/2026')).not.toHaveLength(0);
+    expect(screen.getAllByText('Macedo Lucas Rodrigues')).not.toHaveLength(0);
+    expect(screen.queryByText('Emanuella')).not.toBeInTheDocument();
+  });
+
+  test('mostra todos os cinco pré-vendedores na tabela do ranking normal', () => {
+    render(
+      <App
+        initialRows={rowsWithJune}
+        initialPeriods={[periods[2], periods[0]]}
+      />,
+    );
+
+    const sdrPanel = screen.getByRole('region', { name: 'SDR / Pré-vendas' });
+
+    expect(within(sdrPanel).getByText('5 integrantes')).toBeInTheDocument();
+    expect(within(sdrPanel).getAllByText('Emanuella')).not.toHaveLength(0);
+    expect(within(sdrPanel).getAllByText('Pedro Paulo')).not.toHaveLength(0);
+    expect(within(sdrPanel).getAllByText('Matheus Caruzo')).not.toHaveLength(0);
+  });
+
   test('trocar o período recalcula o ranking exibido', async () => {
     const user = userEvent.setup();
-    render(<App initialRows={rows} initialPeriods={periods} />);
+    render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
 
@@ -261,7 +369,7 @@ describe('App', () => {
   });
 
   test('não renderiza painel separado de inconsistências operacionais', () => {
-    render(<App initialRows={rows} initialPeriods={periods} />);
+    render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
     expect(
       screen.queryByText('Inconsistências operacionais'),
@@ -438,7 +546,7 @@ describe('App', () => {
   });
 
   test('mantém altura visual do pódio por posição', () => {
-    render(<App initialRows={rows} initialPeriods={periods} />);
+    render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
     const closerPodium = screen.getByLabelText('Top 3 Closers');
     const sdrPodium = screen.getByLabelText('Top 3 SDR / Pré-vendas');
@@ -473,7 +581,7 @@ describe('App', () => {
   test('exibe Denner Toasty automaticamente a cada cinco minutos', async () => {
     vi.useFakeTimers();
 
-    render(<App initialRows={rows} initialPeriods={periods} />);
+    render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
     expect(screen.queryByLabelText('Denner Toasty')).not.toBeInTheDocument();
 
@@ -494,7 +602,7 @@ describe('App', () => {
     vi.useFakeTimers();
     const { playMock } = mockAudio();
 
-    render(<App initialRows={rows} initialPeriods={periods} />);
+    render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
     await act(async () => {
       vi.advanceTimersByTime(300_000);
@@ -753,7 +861,7 @@ describe('App', () => {
   test('usa o PNG transparente do Denner com caminho versionado', async () => {
     vi.useFakeTimers();
 
-    render(<App initialRows={rows} initialPeriods={periods} />);
+    render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
     await act(async () => {
       vi.advanceTimersByTime(300_000);
@@ -769,7 +877,7 @@ describe('App', () => {
 
   test('precarrega a imagem do Denner assim que o ranking abre', () => {
     const { container } = render(
-      <App initialRows={rows} initialPeriods={periods} />,
+      <App initialRows={rows} initialPeriods={mayAprilPeriods} />,
     );
     const preloadImage = container.querySelector('.toasty-image-preload');
 
@@ -837,7 +945,7 @@ describe('App', () => {
 
     vi.stubGlobal('fetch', fetchMock);
 
-    render(<App initialRows={rows} initialPeriods={periods} />);
+    render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
     await user.click(screen.getByRole('button', { name: 'Soltar Toasty' }));
 
@@ -870,7 +978,7 @@ describe('App', () => {
 
     vi.stubGlobal('fetch', fetchMock);
 
-    render(<App initialRows={rows} initialPeriods={periods} />);
+    render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
     await user.click(screen.getByRole('button', { name: 'Soltar Rapaz' }));
 
@@ -910,7 +1018,7 @@ describe('App', () => {
 
       vi.stubGlobal('fetch', fetchMock);
 
-      render(<App initialRows={rows} initialPeriods={periods} />);
+      render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
       await user.click(screen.getByRole('button', { name: button }));
 
@@ -921,7 +1029,7 @@ describe('App', () => {
   );
 
   test('renderiza bases de pódio com metais por posição', () => {
-    render(<App initialRows={rows} initialPeriods={periods} />);
+    render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
     const closerPodium = screen.getByLabelText('Top 3 Closers');
 
@@ -944,7 +1052,7 @@ describe('App', () => {
 
   test('permite alternar o destaque ativo no pódio', async () => {
     const user = userEvent.setup();
-    render(<App initialRows={rows} initialPeriods={periods} />);
+    render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
     const closerPodium = screen.getByLabelText('Top 3 Closers');
     const firstButton = within(
@@ -964,7 +1072,7 @@ describe('App', () => {
 
   test('expande o ranking de closers ao clicar na área do bloco', async () => {
     const user = userEvent.setup();
-    render(<App initialRows={rows} initialPeriods={periods} />);
+    render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
     const closerPanel = screen.getByRole('region', { name: 'Closers' });
 
@@ -983,7 +1091,7 @@ describe('App', () => {
 
   test('expande o ranking de SDRs pelo botão e fecha com escape', async () => {
     const user = userEvent.setup();
-    render(<App initialRows={rows} initialPeriods={periods} />);
+    render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
     const sdrPanel = screen.getByRole('region', { name: 'SDR / Pré-vendas' });
 

@@ -5,7 +5,7 @@ import {
 } from './normalization.js';
 import type { PeriodFilter, RawRankingRow } from './ranking.js';
 
-interface SheetRankingData {
+export interface SheetRankingData {
   readonly periods: readonly PeriodFilter[];
   readonly rows: readonly RawRankingRow[];
   readonly sourceSpreadsheet: {
@@ -14,6 +14,11 @@ interface SheetRankingData {
     readonly sheet: string;
     readonly timezone: string;
   };
+}
+
+export interface GoogleSheetSourceInfo {
+  readonly gid: string;
+  readonly title: string;
 }
 
 interface SheetColumnIndexes {
@@ -33,18 +38,38 @@ interface MemberMapping {
   readonly aliases: readonly string[];
 }
 
-const SOURCE_SPREADSHEET = {
-  title: 'Controle de Resultados | Alfradique & Co RJ',
-  url: 'https://docs.google.com/spreadsheets/d/1iqFf2dbfsG_tl2FB8TrPsBfjO3xkvQYrnvqheUPY9KE/edit?gid=1481288268#gid=1481288268',
-  sheet: 'CDR MAIO/26',
-  timezone: 'America/Sao_Paulo',
-} as const;
+export const SOURCE_SPREADSHEET_ID =
+  '1iqFf2dbfsG_tl2FB8TrPsBfjO3xkvQYrnvqheUPY9KE';
+export const SOURCE_SPREADSHEET_TITLE =
+  'Controle de Resultados | Alfradique & Co RJ';
+export const SOURCE_SPREADSHEET_TIMEZONE = 'America/Sao_Paulo';
+export const DEFAULT_SOURCE_SHEET: GoogleSheetSourceInfo = {
+  gid: '1481288268',
+  title: 'CDR MAIO/26',
+};
 
 const DEFAULT_PERIOD: PeriodFilter = {
   label: 'Maio/2026',
   start: '2026-05-01',
   end: '2026-05-31',
 };
+const MONTH_NAMES = [
+  'Janeiro',
+  'Fevereiro',
+  'Março',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
+] as const;
+const MONTH_INDEX_BY_KEY = new Map(
+  MONTH_NAMES.map((label, index) => [normalizeKey(label), index + 1]),
+);
 
 const KNOWN_CLOSERS: readonly MemberMapping[] = [
   {
@@ -80,20 +105,38 @@ const KNOWN_SDRS: readonly MemberMapping[] = [
     name: 'Lucas Macedo',
     aliases: ['Lucas Macedo', 'Macedo Lucas Rodrigues', 'Macedo'],
   },
+  {
+    id: 'gisela-emanuella-candido-costa-silva',
+    name: 'Emanuella',
+    aliases: ['Emanuella', 'Gisela Emanuella Candido Costa Silva'],
+  },
+  {
+    id: 'pedro-paulo-dias-da-fonseca',
+    name: 'Pedro Paulo',
+    aliases: ['Pedro Paulo', 'Pedro Paulo Dias da Fonseca'],
+  },
+  {
+    id: 'matheus-caruzo-monteiro-goncalves',
+    name: 'Matheus Caruzo',
+    aliases: ['Matheus Caruzo', 'Matheus Caruzo Monteiro Gonçalves'],
+  },
 ];
 
 const IGNORED_CLOSER_KEYS = new Set(['bruno alfradique', 'bruno']);
 
-export function parseGoogleSheetRankingCsv(csv: string): SheetRankingData {
+export function parseGoogleSheetRankingCsv(
+  csv: string,
+  sourceSheet: GoogleSheetSourceInfo = DEFAULT_SOURCE_SHEET,
+): SheetRankingData {
   const table = parseCsv(csv);
-  const period = detectPeriod(table);
+  const period = detectPeriod(table, sourceSheet);
   const cdrSourceRows = createCdrSourceRows(table, period);
 
   if (cdrSourceRows.length > 0) {
     return {
       periods: [period],
       rows: normalizeLocalRows(cdrSourceRows),
-      sourceSpreadsheet: SOURCE_SPREADSHEET,
+      sourceSpreadsheet: createSourceSpreadsheet(sourceSheet),
     };
   }
 
@@ -115,7 +158,16 @@ export function parseGoogleSheetRankingCsv(csv: string): SheetRankingData {
   return {
     periods: [period],
     rows: normalizeLocalRows(sourceRows),
-    sourceSpreadsheet: SOURCE_SPREADSHEET,
+    sourceSpreadsheet: createSourceSpreadsheet(sourceSheet),
+  };
+}
+
+function createSourceSpreadsheet(sourceSheet: GoogleSheetSourceInfo) {
+  return {
+    title: SOURCE_SPREADSHEET_TITLE,
+    url: `https://docs.google.com/spreadsheets/d/${SOURCE_SPREADSHEET_ID}/edit?gid=${sourceSheet.gid}#gid=${sourceSheet.gid}`,
+    sheet: sourceSheet.title,
+    timezone: SOURCE_SPREADSHEET_TIMEZONE,
   };
 }
 
@@ -151,8 +203,8 @@ function createCloserRowsFromCdrSummary(
     role: 'closer',
     memberId: member.id,
     memberName: member.name,
-    revenue: revenueRow[column] ?? 0,
-    logos: logosRow[column] ?? 0,
+    revenue: parseMetricValue(revenueRow[column]) ?? 0,
+    logos: parseMetricValue(logosRow[column]) ?? 0,
     sourceChannel: 'Lead Broker',
   }));
 }
@@ -173,14 +225,36 @@ function createSdrRowsFromCdrSummary(
     return [];
   }
 
-  return section.members.map(({ column, member }) => ({
-    period: period.end,
-    role: 'sdr',
-    memberId: member.id,
-    memberName: member.name,
-    meetingsHeld: meetingsRow[column] ?? 0,
-    sourceChannel: 'Lead Broker',
-  }));
+  return section.members.flatMap(({ column, member }) => {
+    const meetingsHeld = parseMetricValue(meetingsRow[column]) ?? 0;
+
+    if (!shouldIncludeSdrSummaryMember(member, meetingsHeld, period)) {
+      return [];
+    }
+
+    const sourceRow: LocalRankingSourceRow = {
+      period: period.end,
+      role: 'sdr',
+      memberId: member.id,
+      memberName: member.name,
+      meetingsHeld,
+      sourceChannel: 'Lead Broker',
+    };
+
+    return [sourceRow];
+  });
+}
+
+function shouldIncludeSdrSummaryMember(
+  member: MemberMapping,
+  meetingsHeld: number,
+  period: PeriodFilter,
+): boolean {
+  return !(
+    member.id === 'lucas-macedo' &&
+    meetingsHeld === 0 &&
+    period.start >= '2026-06-01'
+  );
 }
 
 function createCloserSourceRows(
@@ -344,8 +418,9 @@ function createSdrRowsFromSummary(
 
   for (let index = 1; index < values.length; index += 1) {
     const sdr = resolveMember(names[index], KNOWN_SDRS);
+    const meetingsHeld = parseMetricValue(values[index]) ?? 0;
 
-    if (!sdr) {
+    if (!sdr || !shouldIncludeSdrSummaryMember(sdr, meetingsHeld, period)) {
       continue;
     }
 
@@ -354,7 +429,7 @@ function createSdrRowsFromSummary(
       role: 'sdr',
       memberId: sdr.id,
       memberName: sdr.name,
-      meetingsHeld: parseMetricValue(values[index]) ?? 0,
+      meetingsHeld,
       sourceChannel: 'Lead Broker',
     });
   }
@@ -432,9 +507,19 @@ function findColumn(headers: readonly string[], columnName: string): number {
   return index;
 }
 
-function detectPeriod(table: readonly (readonly string[])[]): PeriodFilter {
-  const start = findLabeledDate(table, 'data inicio') ?? DEFAULT_PERIOD.start;
-  const end = findLabeledDate(table, 'data fim') ?? DEFAULT_PERIOD.end;
+function detectPeriod(
+  table: readonly (readonly string[])[],
+  sourceSheet: GoogleSheetSourceInfo,
+): PeriodFilter {
+  const sourcePeriod = createPeriodFromSourceSheetTitle(sourceSheet.title);
+  const start =
+    findLabeledDate(table, 'data inicio') ??
+    sourcePeriod?.start ??
+    DEFAULT_PERIOD.start;
+  const end =
+    findLabeledDate(table, 'data fim') ??
+    sourcePeriod?.end ??
+    createMonthPeriodFromStart(start).end;
 
   return {
     start,
@@ -448,7 +533,7 @@ function findLabeledDate(
   label: string,
 ): string | undefined {
   for (const row of table) {
-    if (normalizeKey(row[0]) === label) {
+    if (normalizeLabel(row[0]) === label) {
       return parseSheetDate(row[1]) ?? undefined;
     }
   }
@@ -456,24 +541,52 @@ function findLabeledDate(
   return undefined;
 }
 
+function normalizeLabel(value: string | undefined): string {
+  return normalizeKey(value).replace(/:+$/, '');
+}
+
 function createPeriodLabel(date: string): string {
   const [year, month] = date.split('-');
-  const monthNames = [
-    'Janeiro',
-    'Fevereiro',
-    'Março',
-    'Abril',
-    'Maio',
-    'Junho',
-    'Julho',
-    'Agosto',
-    'Setembro',
-    'Outubro',
-    'Novembro',
-    'Dezembro',
-  ];
 
-  return `${monthNames[Number(month) - 1] ?? month}/${year}`;
+  return `${MONTH_NAMES[Number(month) - 1] ?? month}/${year}`;
+}
+
+function createPeriodFromSourceSheetTitle(title: string): PeriodFilter | null {
+  const match = /^CDR\s+(.+?)\/(\d{2}|\d{4})$/i.exec(title.trim());
+
+  if (!match) {
+    return null;
+  }
+
+  const [, monthText, yearText] = match;
+  const month = MONTH_INDEX_BY_KEY.get(normalizeKey(monthText));
+  const year =
+    yearText.length === 2 ? 2000 + Number(yearText) : Number(yearText);
+
+  if (!month || !Number.isFinite(year)) {
+    return null;
+  }
+
+  return createMonthPeriod(year, month);
+}
+
+function createMonthPeriod(year: number, month: number): PeriodFilter {
+  const start = `${year}-${String(month).padStart(2, '0')}-01`;
+  const end = `${year}-${String(month).padStart(2, '0')}-${String(
+    new Date(year, month, 0).getDate(),
+  ).padStart(2, '0')}`;
+
+  return {
+    end,
+    label: createPeriodLabel(start),
+    start,
+  };
+}
+
+function createMonthPeriodFromStart(start: string): PeriodFilter {
+  const [yearText, monthText] = start.split('-');
+
+  return createMonthPeriod(Number(yearText), Number(monthText));
 }
 
 function resolveMember(

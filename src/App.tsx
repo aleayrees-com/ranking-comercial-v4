@@ -222,9 +222,11 @@ export function App({
   const periods =
     dataState.status === 'ready' ? dataState.periods : DEFAULT_PERIODS;
   const investors = initialInvestors ?? investorProfiles;
+  const requestedPeriodMonth = useMemo(getRequestedPeriodMonth, []);
+  const hasManualPeriodSelectionRef = useRef(false);
 
   const [selectedPeriodKey, setSelectedPeriodKey] = useState(() =>
-    getPeriodKey(periods[0] ?? DEFAULT_PERIODS[0]),
+    getPeriodKey(findPreferredPeriod(periods, requestedPeriodMonth)),
   );
   const [expandedPanelKind, setExpandedPanelKind] =
     useState<RankingKind | null>(null);
@@ -257,8 +259,7 @@ export function App({
 
   const selectedPeriod =
     periods.find((period) => getPeriodKey(period) === selectedPeriodKey) ??
-    periods[0] ??
-    DEFAULT_PERIODS[0];
+    findPreferredPeriod(periods, requestedPeriodMonth);
 
   useEffect(() => {
     const image = new Image();
@@ -458,10 +459,25 @@ export function App({
   }, [initialError, initialRows]);
 
   useEffect(() => {
-    if (!periods.some((period) => getPeriodKey(period) === selectedPeriodKey)) {
-      setSelectedPeriodKey(getPeriodKey(periods[0] ?? DEFAULT_PERIODS[0]));
+    const selectedExists = periods.some(
+      (period) => getPeriodKey(period) === selectedPeriodKey,
+    );
+    const preferredKey = getPeriodKey(
+      findPreferredPeriod(periods, requestedPeriodMonth),
+    );
+
+    if (hasManualPeriodSelectionRef.current) {
+      if (!selectedExists) {
+        setSelectedPeriodKey(preferredKey);
+      }
+
+      return;
     }
-  }, [periods, selectedPeriodKey]);
+
+    if (!selectedExists || selectedPeriodKey !== preferredKey) {
+      setSelectedPeriodKey(preferredKey);
+    }
+  }, [periods, requestedPeriodMonth, selectedPeriodKey]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -618,7 +634,10 @@ export function App({
                       isSelected ? 'period-toggle is-selected' : 'period-toggle'
                     }
                     key={periodKey}
-                    onClick={() => setSelectedPeriodKey(periodKey)}
+                    onClick={() => {
+                      hasManualPeriodSelectionRef.current = true;
+                      setSelectedPeriodKey(periodKey);
+                    }}
                     type="button"
                   >
                     <CalendarDays aria-hidden="true" size={16} />
@@ -1306,7 +1325,7 @@ function createReadyState({
   if (periods && periods.length > 0) {
     return {
       status: 'ready',
-      periods: periods.map(normalizePeriodFilter),
+      periods: sortPeriodsDescending(periods.map(normalizePeriodFilter)),
       rows,
       sourceInfo,
     };
@@ -1407,6 +1426,14 @@ function mergePeriodFilters(
   return Array.from(byMonth.values());
 }
 
+function sortPeriodsDescending(
+  periods: readonly PeriodFilter[],
+): readonly PeriodFilter[] {
+  return [...periods].sort((left, right) =>
+    getPeriodMonth(right).localeCompare(getPeriodMonth(left)),
+  );
+}
+
 function derivePeriods(
   rows: readonly RawRankingRow[],
 ): readonly PeriodFilter[] {
@@ -1448,6 +1475,33 @@ function createMonthPeriod(month: string): PeriodFilter {
     end: `${month}-${String(lastDay).padStart(2, '0')}`,
     label: `${monthLabels[monthNumber - 1] ?? monthText}/${year}`,
   };
+}
+
+function getRequestedPeriodMonth(): string | null {
+  const requestedPeriod = new URLSearchParams(window.location.search)
+    .get('period')
+    ?.trim();
+
+  return requestedPeriod && /^\d{4}-\d{2}$/.test(requestedPeriod)
+    ? requestedPeriod
+    : null;
+}
+
+function findPreferredPeriod(
+  periods: readonly PeriodFilter[],
+  requestedPeriodMonth: string | null,
+): PeriodFilter {
+  if (requestedPeriodMonth) {
+    const requestedPeriod = periods.find(
+      (period) => getPeriodMonth(period) === requestedPeriodMonth,
+    );
+
+    if (requestedPeriod) {
+      return requestedPeriod;
+    }
+  }
+
+  return periods[0] ?? DEFAULT_PERIODS[0];
 }
 
 function getPeriodMonth(period: PeriodFilter): string {
