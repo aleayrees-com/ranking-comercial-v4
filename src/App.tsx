@@ -1113,7 +1113,6 @@ function RankingTable({
           <tr>
             <th scope="col">Pos.</th>
             <th scope="col">Integrante</th>
-            <th scope="col">Canal</th>
             {kind === 'closer' ? (
               <>
                 <th scope="col">Receita</th>
@@ -1135,7 +1134,6 @@ function RankingTable({
                     <strong>{entry.memberName}</strong>
                   </div>
                 </td>
-                <td>{entry.sourceChannel}</td>
                 {kind === 'closer' ? (
                   <>
                     <td>{formatCurrency(entry.revenue)}</td>
@@ -1148,7 +1146,7 @@ function RankingTable({
             ))
           ) : (
             <tr>
-              <td colSpan={kind === 'closer' ? 5 : 4}>
+              <td colSpan={kind === 'closer' ? 4 : 3}>
                 Sem linhas válidas para listar neste período.
               </td>
             </tr>

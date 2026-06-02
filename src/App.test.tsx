@@ -353,6 +353,14 @@ describe('App', () => {
     expect(within(sdrPanel).getAllByText('Matheus Caruzo')).not.toHaveLength(0);
   });
 
+  test('não exibe coluna de canal nas tabelas do ranking', () => {
+    render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
+
+    expect(
+      screen.queryAllByRole('columnheader', { name: 'Canal' }),
+    ).toHaveLength(0);
+  });
+
   test('trocar o período recalcula o ranking exibido', async () => {
     const user = userEvent.setup();
     render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);

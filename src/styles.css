@@ -836,7 +836,7 @@ button:focus-visible {
 
 table {
   width: 100%;
-  min-width: 560px;
+  min-width: 400px;
   border-collapse: collapse;
   background: #191919;
 }
