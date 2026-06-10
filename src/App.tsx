@@ -1002,7 +1002,6 @@ function PodiumItem({
             <span>{entry.position}º</span>
           </span>
           <span className="podium-name">{entry.memberName}</span>
-          <span className="podium-channel">{entry.sourceChannel}</span>
           <strong>{getPrimaryMetric(entry, kind)}</strong>
           <span className="podium-secondary">
             {kind === 'closer'

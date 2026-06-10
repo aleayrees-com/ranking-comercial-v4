@@ -732,7 +732,6 @@ button:focus-visible {
   word-break: normal;
 }
 
-.podium-channel,
 .podium-secondary {
   display: block;
   margin: 0;
@@ -823,7 +822,6 @@ button:focus-visible {
   font-size: 2.5rem;
 }
 
-.ranking-panel.is-expanded .podium-channel,
 .ranking-panel.is-expanded .podium-secondary {
   font-size: 1rem;
 }

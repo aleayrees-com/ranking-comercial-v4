@@ -361,6 +361,12 @@ describe('App', () => {
     ).toHaveLength(0);
   });
 
+  test('não exibe canal nos cards do pódio', () => {
+    render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
+
+    expect(screen.queryAllByText('Lead Broker')).toHaveLength(0);
+  });
+
   test('trocar o período recalcula o ranking exibido', async () => {
     const user = userEvent.setup();
     render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
