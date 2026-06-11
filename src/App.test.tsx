@@ -588,7 +588,10 @@ describe('App', () => {
       secondPlace.style.getPropertyValue('--podium-height'),
     );
     expect(firstPlace.querySelector('.lucide-crown')).not.toBeNull();
-    expect(firstPlace.querySelector('.podium-v4-crown')).not.toBeNull();
+    expect(firstPlace.querySelector('.podium-v4-crown img')).toHaveAttribute(
+      'src',
+      '/podium-crown-20260611.png',
+    );
     expect(secondPlace.querySelector('.podium-v4-crown')).toBeNull();
   });
 

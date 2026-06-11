@@ -122,6 +122,7 @@ const fixtureModules = (
 
 const LIVE_RANKING_ENDPOINT = '/api/ranking';
 const LIVE_REFRESH_INTERVAL_MS = 10_000;
+const PODIUM_CROWN_SRC = '/podium-crown-20260611.png';
 const ELE_GOSTA_AUDIO_SRC = '/easter-eggs/rodrigo-faro-ele-gosta.mp3';
 const RAPAZ_AUDIO_SRC = '/easter-eggs/rapaz-xaropinho.mp3';
 const TOASTY_AUDIO_SRC = '/easter-eggs/denner-toasty-v2.mp3';
@@ -980,8 +981,14 @@ function PodiumItem({
         <span className="podium-card-top">
           {entry.position === 1 ? (
             <span className="podium-v4-crown" aria-hidden="true">
-              <Crown size={42} />
-              <span>V4</span>
+              <img
+                alt=""
+                decoding="async"
+                height="354"
+                loading="eager"
+                src={PODIUM_CROWN_SRC}
+                width="512"
+              />
             </span>
           ) : null}
           {investor ? (
