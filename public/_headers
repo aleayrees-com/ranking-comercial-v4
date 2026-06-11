@@ -1,3 +1,9 @@
+/
+  Cache-Control: no-store, max-age=0, must-revalidate
+
+/index.html
+  Cache-Control: no-store, max-age=0, must-revalidate
+
 /*
   Cache-Control: public, max-age=0, must-revalidate
 
@@ -5,4 +11,4 @@
   Cache-Control: public, max-age=31536000, immutable
 
 /easter-eggs/*
-  Cache-Control: public, max-age=3600, must-revalidate
+  Cache-Control: public, max-age=0, must-revalidate

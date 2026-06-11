@@ -19,11 +19,10 @@ describe('Toasty layout', () => {
   test('uses a compact Toasty overlay on short 720p TV viewports', () => {
     const css = readFileSync(resolve(repoRoot, 'src/styles.css'), 'utf8');
     const shortTvRule =
-      css.match(
-        /@media \(orientation: landscape\) and \(max-height: 720px\)[\s\S]+?(?=@media|$)/,
-      )?.[0] ?? '';
+      css.match(/@media \(max-height: 720px\)[\s\S]+?(?=@media|$)/)?.[0] ?? '';
 
     expect(shortTvRule).toContain('.toasty-easter-egg');
+    expect(shortTvRule).not.toContain('orientation: landscape');
     expect(shortTvRule).toContain('width: clamp(150px, 24vw, 240px)');
     expect(shortTvRule).toContain('right: clamp(14px, 4vw, 48px)');
     expect(shortTvRule).toContain('bottom: clamp(12px, 4dvh, 36px)');

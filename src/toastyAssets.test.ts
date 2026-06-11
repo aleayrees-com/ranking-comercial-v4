@@ -26,7 +26,7 @@ describe('Toasty assets', () => {
   test('uses a transparent Denner cutout', () => {
     const assetPath = resolve(
       repoRoot,
-      'public/easter-eggs/denner-toasty-tv-safe-20260529.png',
+      'public/easter-eggs/denner-toasty-tv-safe-20260611.png',
     );
     const bytes = readFileSync(assetPath);
 
