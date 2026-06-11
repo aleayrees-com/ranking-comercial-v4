@@ -16,6 +16,19 @@ describe('Toasty layout', () => {
     expect(normalAnimation).not.toContain('translateX(108%)');
   });
 
+  test('uses a compact Toasty overlay on short 720p TV viewports', () => {
+    const css = readFileSync(resolve(repoRoot, 'src/styles.css'), 'utf8');
+    const shortTvRule =
+      css.match(
+        /@media \(orientation: landscape\) and \(max-height: 720px\)[\s\S]+?(?=@media|$)/,
+      )?.[0] ?? '';
+
+    expect(shortTvRule).toContain('.toasty-easter-egg');
+    expect(shortTvRule).toContain('width: clamp(150px, 24vw, 240px)');
+    expect(shortTvRule).toContain('right: clamp(14px, 4vw, 48px)');
+    expect(shortTvRule).toContain('bottom: clamp(12px, 4dvh, 36px)');
+  });
+
   test('keeps the expanded podium crown below the header on short TVs', () => {
     const css = readFileSync(resolve(repoRoot, 'src/styles.css'), 'utf8');
 

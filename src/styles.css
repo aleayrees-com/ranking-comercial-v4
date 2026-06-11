@@ -1056,6 +1056,21 @@ tbody tr:last-child td {
   outline-offset: 3px;
 }
 
+@media (orientation: landscape) and (max-height: 720px) {
+  .toasty-easter-egg {
+    right: clamp(14px, 4vw, 48px);
+    bottom: clamp(12px, 4vh, 36px);
+    bottom: clamp(12px, 4dvh, 36px);
+    width: clamp(150px, 24vw, 240px);
+  }
+
+  .toasty-easter-egg strong {
+    margin-top: -16px;
+    padding: 6px 10px;
+    font-size: clamp(1rem, 3vw, 1.8rem);
+  }
+}
+
 .control-shell {
   --accent: #e50000;
   --muted: rgba(255, 255, 255, 0.68);
@@ -1233,10 +1248,48 @@ tbody tr:last-child td {
   }
 }
 
-@media (orientation: landscape) and (min-width: 800px) {
+@media (orientation: landscape) and (min-width: 640px) {
   .ranking-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
+    gap: 12px;
+  }
+
+  .ranking-panel {
+    padding: 12px;
+  }
+
+  .ranking-panel .panel-heading {
+    margin-bottom: 10px;
+  }
+
+  table {
+    min-width: 0;
+    table-layout: fixed;
+  }
+
+  th,
+  td {
+    padding: 9px 8px;
+    font-size: 0.78rem;
+  }
+
+  th {
+    font-size: 0.66rem;
+  }
+
+  td:first-child,
+  th:first-child {
+    width: 42px;
+  }
+
+  .member-cell {
+    gap: 7px;
+  }
+
+  .member-cell .investor-image--member {
+    width: 30px;
+    height: 30px;
   }
 }
 

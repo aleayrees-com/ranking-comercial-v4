@@ -10,12 +10,25 @@ describe('TV layout', () => {
     const css = readFileSync(resolve(repoRoot, 'src/styles.css'), 'utf8');
     const landscapeRule =
       css.match(
-        /@media \(orientation: landscape\) and \(min-width: 800px\)[\s\S]+?(?=@media|$)/,
+        /@media \(orientation: landscape\) and \(min-width: 640px\)[\s\S]+?(?=@media|$)/,
       )?.[0] ?? '';
 
     expect(landscapeRule).toContain('.ranking-grid');
     expect(landscapeRule).toContain(
       'grid-template-columns: repeat(2, minmax(0, 1fr))',
     );
+  });
+
+  test('uses compact tables when two rankings share a 720p TV row', () => {
+    const css = readFileSync(resolve(repoRoot, 'src/styles.css'), 'utf8');
+    const landscapeRule =
+      css.match(
+        /@media \(orientation: landscape\) and \(min-width: 640px\)[\s\S]+?(?=@media|$)/,
+      )?.[0] ?? '';
+
+    expect(landscapeRule).toContain('table');
+    expect(landscapeRule).toContain('min-width: 0');
+    expect(landscapeRule).toContain('td:first-child');
+    expect(landscapeRule).toContain('width: 42px');
   });
 });
