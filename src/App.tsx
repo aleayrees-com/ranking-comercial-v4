@@ -123,6 +123,10 @@ const fixtureModules = (
 const LIVE_RANKING_ENDPOINT = '/api/ranking';
 const LIVE_REFRESH_INTERVAL_MS = 10_000;
 const PODIUM_CROWN_SRC = '/podium-crown-20260611.png';
+const SDR_PODIUM_EXCLUDED_MEMBER_IDS = new Set([
+  'lucas-macedo',
+  'miguel-de-oliveira-guimaraes-vieira',
+]);
 const ELE_GOSTA_AUDIO_SRC = '/easter-eggs/rodrigo-faro-ele-gosta.mp3';
 const RAPAZ_AUDIO_SRC = '/easter-eggs/rapaz-xaropinho.mp3';
 const TOASTY_AUDIO_SRC = '/easter-eggs/denner-toasty-v2.mp3';
@@ -844,7 +848,7 @@ function RankingPanel({
   readonly onExpand: () => void;
   readonly title: string;
 }) {
-  const topEntries = entries.slice(0, 3);
+  const topEntries = getPodiumEntries(entries, kind);
   const firstMemberId = topEntries[0]?.memberId ?? null;
   const topEntryIds = topEntries.map((entry) => entry.memberId).join('|');
   const [activeMemberId, setActiveMemberId] = useState<string | null>(
@@ -1526,6 +1530,23 @@ function getPrimaryMetric(entry: RankingEntry, kind: RankingKind): string {
 
 function getRankingMetricValue(entry: RankingEntry, kind: RankingKind): number {
   return kind === 'closer' ? entry.revenue : entry.meetingsHeld;
+}
+
+function getPodiumEntries(
+  entries: readonly RankingEntry[],
+  kind: RankingKind,
+): readonly RankingEntry[] {
+  const eligibleEntries =
+    kind === 'sdr'
+      ? entries.filter(
+          (entry) => !SDR_PODIUM_EXCLUDED_MEMBER_IDS.has(entry.memberId),
+        )
+      : entries;
+
+  return eligibleEntries.slice(0, 3).map((entry, index) => ({
+    ...entry,
+    position: index + 1,
+  }));
 }
 
 function getPodiumMetal(position: number): 'gold' | 'silver' | 'bronze' {

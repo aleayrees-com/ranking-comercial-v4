@@ -353,6 +353,82 @@ describe('App', () => {
     expect(within(sdrPanel).getAllByText('Matheus Caruzo')).not.toHaveLength(0);
   });
 
+  test('mantém Lucas Macedo e Miguel na lista de SDRs, mas fora do pódio', () => {
+    render(
+      <App
+        initialRows={[
+          {
+            period: '2026-06-02',
+            role: 'sdr',
+            memberId: 'lucas-macedo',
+            memberName: 'Lucas Macedo',
+            meetingsHeld: 20,
+            sourceChannel: 'Lead Broker',
+          },
+          {
+            period: '2026-06-02',
+            role: 'sdr',
+            memberId: 'miguel-de-oliveira-guimaraes-vieira',
+            memberName: 'Miguel de Oliveira Guimarães Vieira',
+            meetingsHeld: 19,
+            sourceChannel: 'Lead Broker',
+          },
+          {
+            period: '2026-06-02',
+            role: 'sdr',
+            memberId: 'sdr-emanuella',
+            memberName: 'Emanuella',
+            meetingsHeld: 8,
+            sourceChannel: 'Lead Broker',
+          },
+          {
+            period: '2026-06-02',
+            role: 'sdr',
+            memberId: 'sdr-pedro-paulo',
+            memberName: 'Pedro Paulo',
+            meetingsHeld: 7,
+            sourceChannel: 'Lead Broker',
+          },
+          {
+            period: '2026-06-02',
+            role: 'sdr',
+            memberId: 'sdr-matheus-caruzo',
+            memberName: 'Matheus Caruzo',
+            meetingsHeld: 3,
+            sourceChannel: 'Lead Broker',
+          },
+        ]}
+        initialPeriods={[periods[2]]}
+      />,
+    );
+
+    const sdrPanel = screen.getByRole('region', { name: 'SDR / Pré-vendas' });
+    const sdrPodium = screen.getByLabelText('Top 3 SDR / Pré-vendas');
+    const sdrTable = within(sdrPanel).getByRole('table', {
+      name: 'Lista completa de SDR / Pré-vendas',
+    });
+
+    expect(within(sdrTable).getByText('Lucas Macedo')).toBeInTheDocument();
+    expect(
+      within(sdrTable).getByText('Miguel de Oliveira Guimarães Vieira'),
+    ).toBeInTheDocument();
+    expect(
+      within(sdrPodium).queryByText('Lucas Macedo'),
+    ).not.toBeInTheDocument();
+    expect(
+      within(sdrPodium).queryByText('Miguel de Oliveira Guimarães Vieira'),
+    ).not.toBeInTheDocument();
+    expect(within(sdrPodium).getByTestId('podium-sdr-1')).toHaveTextContent(
+      'Emanuella',
+    );
+    expect(within(sdrPodium).getByTestId('podium-sdr-2')).toHaveTextContent(
+      'Pedro Paulo',
+    );
+    expect(within(sdrPodium).getByTestId('podium-sdr-3')).toHaveTextContent(
+      'Matheus Caruzo',
+    );
+  });
+
   test('não exibe coluna de canal nas tabelas do ranking', () => {
     render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
