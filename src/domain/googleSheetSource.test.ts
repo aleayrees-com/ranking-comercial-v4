@@ -265,6 +265,82 @@ describe('parseGoogleSheetRankingCsv', () => {
     );
   });
 
+  test('continues scanning for closers when the pre-sales summary has closer names', () => {
+    const csv = createCsv([
+      row({
+        200: 'META',
+        201: 'Macedo Lucas Rodrigues',
+        202: 'Lucas Vieira',
+        203: 'Miguel de Oliveira Guimarães Vieira',
+        204: 'Emanuella',
+        205: 'Pedro Paulo',
+        206: 'Matheus Caruzo',
+        211: 'Total Time',
+        220: 'META',
+        221: 'Carlos Guerra',
+        222: 'Macedo Lucas Rodrigues',
+        223: 'Miguel de Oliveira Guimarães Vieira',
+        224: 'XPTO 5',
+        225: 'TOTAL',
+      }),
+      row({
+        200: 'REALIZADO',
+        201: '12',
+        202: '12',
+        203: '2',
+        204: '8',
+        205: '7',
+        206: '3',
+        211: '44',
+        220: 'REALIZADO',
+        221: 'R$ 19.108,00',
+        222: 'R$ 45.906',
+        223: 'R$ 0',
+        224: 'R$ 0',
+        225: 'R$ 65.013,89',
+      }),
+      row({
+        220: 'Vendas',
+        221: '1',
+        222: '6',
+        223: '0',
+        224: '0',
+        225: '7',
+      }),
+    ]);
+
+    const result = parseGoogleSheetRankingCsv(csv, {
+      gid: '1368144463',
+      title: 'CDR JUNHO/26',
+    });
+
+    expect(result.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'closer',
+          memberId: 'carlos-guerra',
+          memberName: 'Carlos Guerra',
+          revenue: 19108,
+          logos: 1,
+        }),
+        expect.objectContaining({
+          role: 'closer',
+          memberId: 'lucas-macedo',
+          memberName: 'Lucas Macedo',
+          revenue: 45906,
+          logos: 6,
+        }),
+        expect.objectContaining({
+          role: 'closer',
+          memberId: 'miguel-de-oliveira-guimaraes-vieira',
+          memberName: 'Miguel de Oliveira Guimarães Vieira',
+          revenue: 0,
+          logos: 0,
+        }),
+      ]),
+    );
+  });
+
   test('keeps known pre-sales members with zero meetings when summary cells are blank', () => {
     const csv = createCsv([
       row({

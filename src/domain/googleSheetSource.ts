@@ -185,64 +185,60 @@ function createCloserRowsFromCdrSummary(
   table: readonly (readonly string[])[],
   period: PeriodFilter,
 ): readonly LocalRankingSourceRow[] {
-  const section = findSummarySection(table, KNOWN_CLOSERS, 2);
+  for (const section of findSummarySections(table, KNOWN_CLOSERS, 2)) {
+    const revenueRow = findSummaryMetricRow(table, section, 'realizado');
+    const logosRow = findSummaryMetricRow(table, section, 'vendas');
 
-  if (!section) {
-    return [];
+    if (!revenueRow || !logosRow) {
+      continue;
+    }
+
+    return section.members.map(({ column, member }) => ({
+      period: period.end,
+      role: 'closer',
+      memberId: member.id,
+      memberName: member.name,
+      revenue: parseMetricValue(revenueRow[column]) ?? 0,
+      logos: parseMetricValue(logosRow[column]) ?? 0,
+      sourceChannel: 'Lead Broker',
+    }));
   }
 
-  const revenueRow = findSummaryMetricRow(table, section, 'realizado');
-  const logosRow = findSummaryMetricRow(table, section, 'vendas');
-
-  if (!revenueRow || !logosRow) {
-    return [];
-  }
-
-  return section.members.map(({ column, member }) => ({
-    period: period.end,
-    role: 'closer',
-    memberId: member.id,
-    memberName: member.name,
-    revenue: parseMetricValue(revenueRow[column]) ?? 0,
-    logos: parseMetricValue(logosRow[column]) ?? 0,
-    sourceChannel: 'Lead Broker',
-  }));
+  return [];
 }
 
 function createSdrRowsFromCdrSummary(
   table: readonly (readonly string[])[],
   period: PeriodFilter,
 ): readonly LocalRankingSourceRow[] {
-  const section = findSummarySection(table, KNOWN_SDRS, 2);
+  for (const section of findSummarySections(table, KNOWN_SDRS, 2)) {
+    const meetingsRow = findSummaryMetricRow(table, section, 'realizado');
 
-  if (!section) {
-    return [];
-  }
-
-  const meetingsRow = findSummaryMetricRow(table, section, 'realizado');
-
-  if (!meetingsRow) {
-    return [];
-  }
-
-  return section.members.flatMap(({ column, member }) => {
-    const meetingsHeld = parseMetricValue(meetingsRow[column]) ?? 0;
-
-    if (!shouldIncludeSdrSummaryMember(member, meetingsHeld, period)) {
-      return [];
+    if (!meetingsRow) {
+      continue;
     }
 
-    const sourceRow: LocalRankingSourceRow = {
-      period: period.end,
-      role: 'sdr',
-      memberId: member.id,
-      memberName: member.name,
-      meetingsHeld,
-      sourceChannel: 'Lead Broker',
-    };
+    return section.members.flatMap(({ column, member }) => {
+      const meetingsHeld = parseMetricValue(meetingsRow[column]) ?? 0;
 
-    return [sourceRow];
-  });
+      if (!shouldIncludeSdrSummaryMember(member, meetingsHeld, period)) {
+        return [];
+      }
+
+      const sourceRow: LocalRankingSourceRow = {
+        period: period.end,
+        role: 'sdr',
+        memberId: member.id,
+        memberName: member.name,
+        meetingsHeld,
+        sourceChannel: 'Lead Broker',
+      };
+
+      return [sourceRow];
+    });
+  }
+
+  return [];
 }
 
 function shouldIncludeSdrSummaryMember(
@@ -325,11 +321,13 @@ interface SummaryMember {
   readonly member: MemberMapping;
 }
 
-function findSummarySection(
+function findSummarySections(
   table: readonly (readonly string[])[],
   mappings: readonly MemberMapping[],
   minimumMembers: number,
-): SummarySection | undefined {
+): readonly SummarySection[] {
+  const sections: SummarySection[] = [];
+
   for (const [rowIndex, row] of table.entries()) {
     for (const [columnIndex, cell] of row.entries()) {
       if (normalizeKey(cell) !== 'meta') {
@@ -339,16 +337,16 @@ function findSummarySection(
       const members = collectSummaryMembers(row, columnIndex + 1, mappings);
 
       if (members.length >= minimumMembers) {
-        return {
+        sections.push({
           headerRowIndex: rowIndex,
           labelColumn: columnIndex,
           members,
-        };
+        });
       }
     }
   }
 
-  return undefined;
+  return sections;
 }
 
 function collectSummaryMembers(
