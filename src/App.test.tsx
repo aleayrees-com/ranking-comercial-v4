@@ -353,7 +353,7 @@ describe('App', () => {
     expect(within(sdrPanel).getAllByText('Matheus Caruzo')).not.toHaveLength(0);
   });
 
-  test('mantém Lucas Macedo e Miguel na lista de SDRs, mas fora do pódio', () => {
+  test('mantém lideranças na lista de SDRs, mas fora do pódio', () => {
     render(
       <App
         initialRows={[
@@ -371,6 +371,14 @@ describe('App', () => {
             memberId: 'miguel-de-oliveira-guimaraes-vieira',
             memberName: 'Miguel de Oliveira Guimarães Vieira',
             meetingsHeld: 19,
+            sourceChannel: 'Lead Broker',
+          },
+          {
+            period: '2026-06-02',
+            role: 'sdr',
+            memberId: 'lucas-moura',
+            memberName: 'Lucas Moura',
+            meetingsHeld: 18,
             sourceChannel: 'Lead Broker',
           },
           {
@@ -412,11 +420,15 @@ describe('App', () => {
     expect(
       within(sdrTable).getByText('Miguel de Oliveira Guimarães Vieira'),
     ).toBeInTheDocument();
+    expect(within(sdrTable).getByText('Lucas Moura')).toBeInTheDocument();
     expect(
       within(sdrPodium).queryByText('Lucas Macedo'),
     ).not.toBeInTheDocument();
     expect(
       within(sdrPodium).queryByText('Miguel de Oliveira Guimarães Vieira'),
+    ).not.toBeInTheDocument();
+    expect(
+      within(sdrPodium).queryByText('Lucas Moura'),
     ).not.toBeInTheDocument();
     expect(within(sdrPodium).getByTestId('podium-sdr-1')).toHaveTextContent(
       'Emanuella',

@@ -125,6 +125,7 @@ const LIVE_REFRESH_INTERVAL_MS = 10_000;
 const PODIUM_CROWN_SRC = '/podium-crown-20260611.png';
 const SDR_PODIUM_EXCLUDED_MEMBER_IDS = new Set([
   'lucas-macedo',
+  'lucas-moura',
   'miguel-de-oliveira-guimaraes-vieira',
 ]);
 const ELE_GOSTA_AUDIO_SRC = '/easter-eggs/rodrigo-faro-ele-gosta.mp3';
