@@ -36,6 +36,10 @@ type CloudflareRequestInit = RequestInit & {
   };
 };
 
+interface RankingContext {
+  readonly request?: Request;
+}
+
 export interface MonthlyCdrSheet extends GoogleSheetSourceInfo {
   readonly end: string;
   readonly label: string;
@@ -61,10 +65,16 @@ class RankingApiError extends Error {
   }
 }
 
-export async function onRequestGet(): Promise<Response> {
+export async function onRequestGet(
+  context: RankingContext = {},
+): Promise<Response> {
   try {
+    const requestedPeriodMonth = getRequestedPeriodMonth(context.request);
     const monthlySheets = await loadMonthlyCdrSheets();
-    const sheetRankings = await loadMonthlySheetRankings(monthlySheets);
+    const sheetRankings = await loadMonthlySheetRankings(
+      monthlySheets,
+      requestedPeriodMonth,
+    );
 
     if (sheetRankings.results.length === 0) {
       return jsonResponse(
@@ -73,7 +83,7 @@ export async function onRequestGet(): Promise<Response> {
       );
     }
 
-    const payload = combineMonthlySheetPayloads(sheetRankings);
+    const payload = combineMonthlySheetPayloads(sheetRankings, monthlySheets);
 
     return jsonResponse({
       ...payload,
@@ -112,6 +122,16 @@ export function discoverMonthlyCdrSheets(
   return Array.from(byStart.values()).sort((left, right) =>
     right.start.localeCompare(left.start),
   );
+}
+
+function getRequestedPeriodMonth(request?: Request): string | null {
+  if (!request) {
+    return null;
+  }
+
+  const period = new URL(request.url).searchParams.get('period')?.trim();
+
+  return period && /^\d{4}-\d{2}$/.test(period) ? period : null;
 }
 
 async function loadMonthlyCdrSheets(): Promise<readonly MonthlyCdrSheet[]> {
@@ -159,13 +179,15 @@ async function loadMonthlySheetRanking(
 
 async function loadMonthlySheetRankings(
   sheets: readonly MonthlyCdrSheet[],
+  requestedPeriodMonth: string | null,
 ): Promise<MonthlySheetRankings> {
+  const targetSheets = selectSheetsToLoad(sheets, requestedPeriodMonth);
   const results = await Promise.allSettled(
-    sheets.map((sheet) => loadMonthlySheetRanking(sheet)),
+    targetSheets.map((sheet) => loadMonthlySheetRanking(sheet)),
   );
 
   const latestResult = results[0];
-  const latestSheet = sheets[0];
+  const latestSheet = targetSheets[0];
 
   if (latestResult?.status === 'rejected' && latestSheet) {
     throw new RankingApiError(
@@ -179,19 +201,43 @@ async function loadMonthlySheetRankings(
       result.status === 'fulfilled' ? [result.value] : [],
     ),
     skippedSheets: results.flatMap((result, index) =>
-      result.status === 'rejected' && sheets[index] ? [sheets[index]] : [],
+      result.status === 'rejected' && targetSheets[index]
+        ? [targetSheets[index]]
+        : [],
     ),
   };
+}
+
+function selectSheetsToLoad(
+  sheets: readonly MonthlyCdrSheet[],
+  requestedPeriodMonth: string | null,
+): readonly MonthlyCdrSheet[] {
+  if (!requestedPeriodMonth) {
+    return sheets[0] ? [sheets[0]] : [];
+  }
+
+  const requestedSheet = sheets.find(
+    (sheet) => sheet.start.slice(0, 7) === requestedPeriodMonth,
+  );
+
+  if (!requestedSheet) {
+    throw new RankingApiError(
+      `Aba mensal CDR não encontrada para ${requestedPeriodMonth}.`,
+      404,
+    );
+  }
+
+  return [requestedSheet];
 }
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'erro desconhecido';
 }
 
-function combineMonthlySheetPayloads({
-  results,
-  skippedSheets,
-}: MonthlySheetRankings): {
+function combineMonthlySheetPayloads(
+  { results, skippedSheets }: MonthlySheetRankings,
+  availableSheets: readonly MonthlyCdrSheet[],
+): {
   readonly isPartial: boolean;
   readonly loadedSheets: readonly string[];
   readonly periodFilters: readonly PeriodFilter[];
@@ -203,7 +249,7 @@ function combineMonthlySheetPayloads({
   const sheets = results.map((result) => result.sheet);
   const payloads = results.map((result) => result.payload);
   const periodFilters = sortPeriodsDescending(
-    uniquePeriods(payloads.flatMap((payload) => payload.periods)),
+    uniquePeriods(availableSheets.map(createPeriodFilterFromSheet)),
   );
   const rows = payloads.flatMap((payload) => payload.rows);
   const latestSheet = sheets[0];
@@ -225,6 +271,14 @@ function combineMonthlySheetPayloads({
       sheet: createCombinedSheetLabel(sheets, skippedSheets),
       timezone: SOURCE_SPREADSHEET_TIMEZONE,
     },
+  };
+}
+
+function createPeriodFilterFromSheet(sheet: MonthlyCdrSheet): PeriodFilter {
+  return {
+    end: sheet.end,
+    label: sheet.label,
+    start: sheet.start,
   };
 }
 

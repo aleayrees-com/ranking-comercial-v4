@@ -28,7 +28,7 @@ describe('/api/ranking', () => {
     ]);
   });
 
-  test('returns rows and period filters for every discovered monthly CDR sheet', async () => {
+  test('returns latest rows and period filters without loading previous CSVs by default', async () => {
     const fetchMock = vi.fn(async (url: string | URL | Request) => {
       const value = String(url);
 
@@ -109,15 +109,91 @@ describe('/api/ranking', () => {
     ]);
     expect(payload.rows).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ memberName: 'Carlos Guerra' }),
         expect.objectContaining({ memberName: 'Emanuella' }),
         expect.objectContaining({ memberName: 'Pedro Paulo' }),
         expect.objectContaining({ memberName: 'Matheus Caruzo' }),
       ]),
     );
-    expect(payload.sourceSpreadsheet.sheet).toBe(
-      'CDR JUNHO/26 + 1 mês anterior',
+    expect(payload.rows).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ memberName: 'Carlos Guerra' }),
+      ]),
     );
+    expect(payload.sourceSpreadsheet.sheet).toBe('CDR JUNHO/26');
+    expect(
+      fetchMock.mock.calls.some((call) =>
+        String(call[0]).includes('gid=1481288268'),
+      ),
+    ).toBe(false);
+  });
+
+  test('loads only requested monthly CSV when period is selected', async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const value = String(url);
+
+      if (value.includes('/edit?usp=sharing')) {
+        return new Response(
+          [
+            createSheetMetadataFragment('1481288268', 'CDR MAIO/26'),
+            createSheetMetadataFragment('1368144463', 'CDR JUNHO/26'),
+          ].join(','),
+          { status: 200 },
+        );
+      }
+
+      if (value.includes('gid=1481288268')) {
+        return new Response(
+          createCsv([
+            row({ 0: 'DATA INÍCIO:', 1: '01/05/2026' }),
+            row({ 0: 'DATA FIM:', 1: '31/05/2026' }),
+            row({
+              182: 'META',
+              183: 'Carlos Guerra',
+              184: 'Macedo Lucas Rodrigues',
+            }),
+            row({ 182: 'REALIZADO', 183: 'R$ 1.000', 184: 'R$ 2.000' }),
+            row({ 182: 'Vendas', 183: '1', 184: '2' }),
+          ]),
+          { status: 200 },
+        );
+      }
+
+      if (value.includes('gid=1368144463')) {
+        return new Response('junho não deveria ser carregado', { status: 500 });
+      }
+
+      return new Response('not found', { status: 404 });
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await onRequestGet({
+      request: new Request(
+        'https://rank.v4alfradique.com/api/ranking?period=2026-05',
+      ),
+    });
+    const payload = (await response.json()) as {
+      readonly periodFilters: readonly { readonly label: string }[];
+      readonly rows: readonly { readonly memberName: string }[];
+      readonly sourceSpreadsheet: { readonly sheet: string };
+    };
+
+    expect(response.status).toBe(200);
+    expect(payload.periodFilters.map((period) => period.label)).toEqual([
+      'Junho/2026',
+      'Maio/2026',
+    ]);
+    expect(payload.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ memberName: 'Carlos Guerra' }),
+      ]),
+    );
+    expect(payload.sourceSpreadsheet.sheet).toBe('CDR MAIO/26');
+    expect(
+      fetchMock.mock.calls.some((call) =>
+        String(call[0]).includes('gid=1368144463'),
+      ),
+    ).toBe(false);
   });
 
   test('fails when the latest monthly CDR sheet cannot be read', async () => {

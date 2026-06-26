@@ -168,7 +168,7 @@ const REMOTE_EFFECT_CONFIG: Record<RemoteEffect, RemoteEffectConfig> = {
     buttonLabel: 'Soltar Brasil Sil Sil',
     label: 'BRASIL SIL SIL!',
     sentMessage: 'Comando enviado. O Denner Brasil Sil Sil vai aparecer na TV.',
-    visibleMs: 3_500,
+    visibleMs: 4_000,
   },
   'ele-gosta': {
     ariaLabel: 'Denner Ele Gosta',
@@ -257,8 +257,10 @@ export function App({
     };
   });
 
-  const periods =
-    dataState.status === 'ready' ? dataState.periods : DEFAULT_PERIODS;
+  const periods = useMemo(
+    () => (dataState.status === 'ready' ? dataState.periods : []),
+    [dataState],
+  );
   const investors = initialInvestors ?? investorProfiles;
   const requestedPeriodMonth = useMemo(getRequestedPeriodMonth, []);
   const hasManualPeriodSelectionRef = useRef(false);
@@ -292,11 +294,16 @@ export function App({
   const selectedPeriod =
     periods.find((period) => getPeriodKey(period) === selectedPeriodKey) ??
     findPreferredPeriod(periods, requestedPeriodMonth);
+  const selectedPeriodMonthRef = useRef(getPeriodMonth(selectedPeriod));
 
   useEffect(() => {
     const image = new Image();
     image.src = TOASTY_IMAGE_SRC;
   }, []);
+
+  useEffect(() => {
+    selectedPeriodMonthRef.current = getPeriodMonth(selectedPeriod);
+  }, [selectedPeriod]);
 
   const ranking = useMemo<RankingResult | null>(() => {
     if (dataState.status !== 'ready') {
@@ -437,6 +444,23 @@ export function App({
     [toastyControlKey, triggerToasty],
   );
 
+  const requestLiveRankingPeriod = useCallback(
+    (periodMonth: string) => {
+      if (initialRows || initialError) {
+        return;
+      }
+
+      loadLiveRankingData(periodMonth)
+        .then((nextState) => {
+          setDataState(nextState);
+        })
+        .catch(() => {
+          // Keep the last known good ranking on transient spreadsheet errors.
+        });
+    },
+    [initialError, initialRows],
+  );
+
   useEffect(() => {
     if (initialRows || initialError) {
       return;
@@ -444,7 +468,7 @@ export function App({
 
     let isActive = true;
 
-    loadRankingData()
+    loadRankingData(requestedPeriodMonth)
       .then((nextState) => {
         if (isActive) {
           setDataState(nextState);
@@ -464,8 +488,13 @@ export function App({
         });
       });
 
+    const getRefreshPeriodMonth = () =>
+      hasManualPeriodSelectionRef.current
+        ? selectedPeriodMonthRef.current
+        : requestedPeriodMonth;
+
     const refreshLiveRanking = () => {
-      loadLiveRankingData()
+      loadLiveRankingData(getRefreshPeriodMonth())
         .then((nextState) => {
           if (isActive) {
             setDataState(nextState);
@@ -494,7 +523,7 @@ export function App({
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', refreshLiveRanking);
     };
-  }, [initialError, initialRows]);
+  }, [initialError, initialRows, requestedPeriodMonth]);
 
   useEffect(() => {
     const selectedExists = periods.some(
@@ -649,42 +678,49 @@ export function App({
             </p>
           </div>
 
-          <div
-            className="period-control"
-            aria-labelledby="period-control-label"
-          >
-            <span className="period-label" id="period-control-label">
-              Período
-            </span>
+          {periods.length > 0 ? (
             <div
-              className="period-toggle-group"
-              role="group"
+              className="period-control"
               aria-labelledby="period-control-label"
             >
-              {periods.map((period) => {
-                const periodKey = getPeriodKey(period);
-                const isSelected = periodKey === getPeriodKey(selectedPeriod);
+              <span className="period-label" id="period-control-label">
+                Período
+              </span>
+              <div
+                className="period-toggle-group"
+                role="group"
+                aria-labelledby="period-control-label"
+              >
+                {periods.map((period) => {
+                  const periodKey = getPeriodKey(period);
+                  const isSelected = periodKey === getPeriodKey(selectedPeriod);
 
-                return (
-                  <button
-                    aria-pressed={isSelected}
-                    className={
-                      isSelected ? 'period-toggle is-selected' : 'period-toggle'
-                    }
-                    key={periodKey}
-                    onClick={() => {
-                      hasManualPeriodSelectionRef.current = true;
-                      setSelectedPeriodKey(periodKey);
-                    }}
-                    type="button"
-                  >
-                    <CalendarDays aria-hidden="true" size={16} />
-                    <span>{period.label}</span>
-                  </button>
-                );
-              })}
+                  return (
+                    <button
+                      aria-pressed={isSelected}
+                      className={
+                        isSelected
+                          ? 'period-toggle is-selected'
+                          : 'period-toggle'
+                      }
+                      key={periodKey}
+                      onClick={() => {
+                        const periodMonth = getPeriodMonth(period);
+
+                        hasManualPeriodSelectionRef.current = true;
+                        setSelectedPeriodKey(periodKey);
+                        requestLiveRankingPeriod(periodMonth);
+                      }}
+                      type="button"
+                    >
+                      <CalendarDays aria-hidden="true" size={16} />
+                      <span>{period.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ) : null}
         </section>
 
         {dataState.status === 'loading' ? (
@@ -1261,16 +1297,23 @@ async function loadRankingFixture(): Promise<RankingDataState> {
   });
 }
 
-async function loadRankingData(): Promise<RankingDataState> {
+async function loadRankingData(
+  periodMonth?: string | null,
+): Promise<RankingDataState> {
   try {
-    return await loadLiveRankingData();
+    return await loadLiveRankingData(periodMonth);
   } catch {
     return loadRankingFixture();
   }
 }
 
-async function loadLiveRankingData(): Promise<RankingDataState> {
+async function loadLiveRankingData(
+  periodMonth?: string | null,
+): Promise<RankingDataState> {
   const url = new URL(LIVE_RANKING_ENDPOINT, window.location.href);
+  if (periodMonth) {
+    url.searchParams.set('period', periodMonth);
+  }
   url.searchParams.set('cachebust', String(Date.now()));
 
   const response = await fetch(url, {
@@ -1464,7 +1507,7 @@ function mergePeriodFilters(
     byMonth.set(getPeriodMonth(normalized), normalized);
   }
 
-  return Array.from(byMonth.values());
+  return sortPeriodsDescending(Array.from(byMonth.values()));
 }
 
 function sortPeriodsDescending(

@@ -35,10 +35,12 @@ O `npm run dev` inicia o Vite em `127.0.0.1`; o terminal informa a porta disponi
 - URL: `https://docs.google.com/spreadsheets/d/1iqFf2dbfsG_tl2FB8TrPsBfjO3xkvQYrnvqheUPY9KE/edit?gid=1368144463#gid=1368144463`
 
 A Function `functions/api/ranking.ts` descobre as abas mensais publicas, ignora
-copias e abas fora do padrao, busca os CSVs sem cache e normaliza os blocos
-oficiais de `REALIZADO`, `Vendas` e `PRÉ VENDAS`. A fixture local fica em
-`src/data/rankingFixture.ts` e preserva a rastreabilidade da origem. O contrato
-esperado esta em `docs/source-contract.md`.
+copias e abas fora do padrao, busca o CSV do periodo exibido sem cache e
+normaliza os blocos oficiais de `REALIZADO`, `Vendas` e `PRÉ VENDAS`. Na
+abertura, a API carrega somente a aba mensal mais recente; ao trocar o periodo,
+o front chama `/api/ranking?period=AAAA-MM` e busca somente aquele mes. A
+fixture local fica em `src/data/rankingFixture.ts` e preserva a rastreabilidade
+da origem. O contrato esperado esta em `docs/source-contract.md`.
 
 O site atualiza os dados automaticamente a cada 10 segundos e tambem ao voltar
 para a aba/janela. Nao e necessario dar F5 na TV ou no navegador.
@@ -56,7 +58,7 @@ para a aba/janela. Nao e necessario dar F5 na TV ou no navegador.
 - Botao `Soltar Ele Gosta`: mostra o Denner com placa `ELE GOSTA!` e toca o
   audio Ele Gosta.
 - Botao `Soltar Brasil Sil Sil`: mostra o Denner com placa `BRASIL SIL SIL!` e
-  toca somente a fala inicial do jingle Goal Brasil Sil Sil.
+  toca o trecho da fala entre 1 e 4 segundos do jingle Goal Brasil Sil Sil.
 - Botao `Soltar Musica Brasil`: mostra o Denner com placa `MUSICA BRASIL!` e
   toca o trecho musical do jingle a partir dos 4 segundos.
 - A TV consulta `GET /api/toasty` a cada 2 segundos e dispara o easter egg

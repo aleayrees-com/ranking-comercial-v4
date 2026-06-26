@@ -323,6 +323,71 @@ describe('App', () => {
     ).not.toBeInTheDocument();
   });
 
+  test('abre o mês mais recente derivado das linhas quando a API não envia filtros', () => {
+    render(<App initialRows={rowsWithJune} />);
+
+    expect(screen.getAllByText('Junho/2026')).not.toHaveLength(0);
+    expect(screen.getAllByText('Emanuella')).not.toHaveLength(0);
+    expect(
+      screen.queryByText('Macedo Lucas Rodrigues'),
+    ).not.toBeInTheDocument();
+  });
+
+  test('busca somente o mês selecionado ao trocar período em tempo real', async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            periods: [periods[2], periods[0]],
+            rows: juneRows,
+            sourceSpreadsheet: {
+              title: 'Planilha em tempo real',
+              sheet: 'CDR JUNHO/26',
+            },
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            status: 200,
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            periods: [periods[2], periods[0]],
+            rows,
+            sourceSpreadsheet: {
+              title: 'Planilha em tempo real',
+              sheet: 'CDR MAIO/26',
+            },
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            status: 200,
+          },
+        ),
+      );
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    expect(await screen.findAllByText('Emanuella')).not.toHaveLength(0);
+
+    await user.click(screen.getByRole('button', { name: 'Maio/2026' }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Macedo Lucas Rodrigues')).not.toHaveLength(0);
+    });
+    expect(String(fetchMock.mock.calls[1]?.[0])).toContain('period=2026-05');
+  });
+
   test('respeita período mensal informado na URL', () => {
     window.history.pushState({}, '', '/?period=2026-05');
 
@@ -1026,7 +1091,7 @@ describe('App', () => {
     expect(screen.getByLabelText('Denner Brasil Sil Sil')).toBeInTheDocument();
 
     await act(async () => {
-      vi.advanceTimersByTime(3_400);
+      vi.advanceTimersByTime(3_900);
     });
 
     expect(screen.getByLabelText('Denner Brasil Sil Sil')).toBeInTheDocument();
