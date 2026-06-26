@@ -45,6 +45,7 @@ describe('Toasty assets', () => {
 
   test.each([
     'public/easter-eggs/jingle-goal-brasil-sil-sil.mp3',
+    'public/easter-eggs/jingle-goal-brasil-musica.mp3',
     'public/easter-eggs/rodrigo-faro-uuii.mp3',
     'public/easter-eggs/rodrigo-faro-ele-gosta.mp3',
   ])('includes audio effect %s', (asset) => {

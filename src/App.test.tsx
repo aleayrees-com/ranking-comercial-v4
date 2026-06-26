@@ -950,6 +950,12 @@ describe('App', () => {
       effect: 'brasil-sil-sil',
       label: 'BRASIL SIL SIL!',
     },
+    {
+      ariaLabel: 'Denner Música Brasil',
+      audioSrc: '/easter-eggs/jingle-goal-brasil-musica.mp3',
+      effect: 'musica-brasil',
+      label: 'MÚSICA BRASIL!',
+    },
   ])(
     'aciona Denner $label remoto com áudio e placa corretos',
     async ({ ariaLabel, audioSrc, effect, label }) => {
@@ -993,7 +999,7 @@ describe('App', () => {
     },
   );
 
-  test('mantém o Brasil Sil Sil visível até o fim do áudio', async () => {
+  test('mostra o Brasil Sil Sil somente até o trecho da fala', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-27T12:00:05.000Z'));
     mockLiveRankingAndToastySignal([
@@ -1020,13 +1026,13 @@ describe('App', () => {
     expect(screen.getByLabelText('Denner Brasil Sil Sil')).toBeInTheDocument();
 
     await act(async () => {
-      vi.advanceTimersByTime(5_200);
+      vi.advanceTimersByTime(3_400);
     });
 
     expect(screen.getByLabelText('Denner Brasil Sil Sil')).toBeInTheDocument();
 
     await act(async () => {
-      vi.advanceTimersByTime(8_300);
+      vi.advanceTimersByTime(100);
     });
 
     expect(
@@ -1208,6 +1214,11 @@ describe('App', () => {
       button: 'Soltar Brasil Sil Sil',
       effect: 'brasil-sil-sil',
       message: 'Comando enviado. O Denner Brasil Sil Sil vai aparecer na TV.',
+    },
+    {
+      button: 'Soltar Música Brasil',
+      effect: 'musica-brasil',
+      message: 'Comando enviado. O Denner Música Brasil vai aparecer na TV.',
     },
   ])(
     'envia comando remoto $button pela tela de controle',

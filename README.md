@@ -56,7 +56,9 @@ para a aba/janela. Nao e necessario dar F5 na TV ou no navegador.
 - Botao `Soltar Ele Gosta`: mostra o Denner com placa `ELE GOSTA!` e toca o
   audio Ele Gosta.
 - Botao `Soltar Brasil Sil Sil`: mostra o Denner com placa `BRASIL SIL SIL!` e
-  toca o jingle Goal Brasil Sil Sil.
+  toca somente a fala inicial do jingle Goal Brasil Sil Sil.
+- Botao `Soltar Musica Brasil`: mostra o Denner com placa `MUSICA BRASIL!` e
+  toca o trecho musical do jingle a partir dos 4 segundos.
 - A TV consulta `GET /api/toasty` a cada 2 segundos e dispara o easter egg
   quando encontra um comando recente.
 

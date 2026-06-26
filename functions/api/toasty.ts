@@ -1,6 +1,7 @@
 const TOASTY_EFFECTS = [
   'brasil-sil-sil',
   'ele-gosta',
+  'musica-brasil',
   'rapaz',
   'toasty',
   'uuii',

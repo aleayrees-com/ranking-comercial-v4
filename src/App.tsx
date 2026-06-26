@@ -92,6 +92,7 @@ type RankingKind = 'closer' | 'sdr';
 type RemoteEffect =
   | 'brasil-sil-sil'
   | 'ele-gosta'
+  | 'musica-brasil'
   | 'rapaz'
   | 'toasty'
   | 'uuii';
@@ -136,6 +137,7 @@ const SDR_PODIUM_EXCLUDED_MEMBER_IDS = new Set([
 ]);
 const ELE_GOSTA_AUDIO_SRC = '/easter-eggs/rodrigo-faro-ele-gosta.mp3';
 const BRASIL_SIL_SIL_AUDIO_SRC = '/easter-eggs/jingle-goal-brasil-sil-sil.mp3';
+const BRASIL_MUSICA_AUDIO_SRC = '/easter-eggs/jingle-goal-brasil-musica.mp3';
 const RAPAZ_AUDIO_SRC = '/easter-eggs/rapaz-xaropinho.mp3';
 const TOASTY_AUDIO_SRC = '/easter-eggs/denner-toasty-v2.mp3';
 const TOASTY_CONTROL_ENDPOINT = '/api/toasty';
@@ -157,6 +159,7 @@ const REMOTE_EFFECTS = [
   'uuii',
   'ele-gosta',
   'brasil-sil-sil',
+  'musica-brasil',
 ] as const;
 const REMOTE_EFFECT_CONFIG: Record<RemoteEffect, RemoteEffectConfig> = {
   'brasil-sil-sil': {
@@ -165,7 +168,7 @@ const REMOTE_EFFECT_CONFIG: Record<RemoteEffect, RemoteEffectConfig> = {
     buttonLabel: 'Soltar Brasil Sil Sil',
     label: 'BRASIL SIL SIL!',
     sentMessage: 'Comando enviado. O Denner Brasil Sil Sil vai aparecer na TV.',
-    visibleMs: 13_500,
+    visibleMs: 3_500,
   },
   'ele-gosta': {
     ariaLabel: 'Denner Ele Gosta',
@@ -173,6 +176,14 @@ const REMOTE_EFFECT_CONFIG: Record<RemoteEffect, RemoteEffectConfig> = {
     buttonLabel: 'Soltar Ele Gosta',
     label: 'ELE GOSTA!',
     sentMessage: 'Comando enviado. O Denner Ele Gosta vai aparecer na TV.',
+  },
+  'musica-brasil': {
+    ariaLabel: 'Denner Música Brasil',
+    audioSrc: BRASIL_MUSICA_AUDIO_SRC,
+    buttonLabel: 'Soltar Música Brasil',
+    label: 'MÚSICA BRASIL!',
+    sentMessage: 'Comando enviado. O Denner Música Brasil vai aparecer na TV.',
+    visibleMs: 9_500,
   },
   rapaz: {
     ariaLabel: 'Denner Rapaz',
