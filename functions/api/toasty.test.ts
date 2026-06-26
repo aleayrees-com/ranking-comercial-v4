@@ -69,7 +69,7 @@ describe('/api/toasty', () => {
     });
   });
 
-  test.each(['uuii', 'ele-gosta'])(
+  test.each(['uuii', 'ele-gosta', 'brasil-sil-sil'])(
     'registra comando remoto %s pelo KV',
     async (effect) => {
       const env = {
@@ -105,7 +105,7 @@ describe('/api/toasty', () => {
     },
   );
 
-  test.each(['uuii', 'ele-gosta'])(
+  test.each(['uuii', 'ele-gosta', 'brasil-sil-sil'])(
     'oculta comando %s para clientes antigos',
     async (effect) => {
       const env = {

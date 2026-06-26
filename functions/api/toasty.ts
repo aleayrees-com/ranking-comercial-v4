@@ -1,4 +1,10 @@
-const TOASTY_EFFECTS = ['ele-gosta', 'rapaz', 'toasty', 'uuii'] as const;
+const TOASTY_EFFECTS = [
+  'brasil-sil-sil',
+  'ele-gosta',
+  'rapaz',
+  'toasty',
+  'uuii',
+] as const;
 
 type ToastyEffect = (typeof TOASTY_EFFECTS)[number];
 

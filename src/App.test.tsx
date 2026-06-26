@@ -143,10 +143,11 @@ function mockAudio(
 
   class MockAudio {
     currentTime = 0;
+    load = vi.fn();
     pause = vi.fn();
     play = playMock;
     preload = '';
-    readonly src: string;
+    src: string;
     volume = 1;
 
     constructor(src = '') {
@@ -881,6 +882,55 @@ describe('App', () => {
     expect(instances[0]?.src).toBe('/easter-eggs/rapaz-xaropinho.mp3');
   });
 
+  test('reutiliza o mesmo player de áudio ao alternar de Toasty para Rapaz', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-27T12:00:06.000Z'));
+    const { instances, playMock } = mockAudio();
+    mockLiveRankingAndToastySignal([
+      {
+        id: '0',
+        triggeredAt: null,
+      },
+      {
+        effect: 'toasty',
+        id: 'remote-toasty',
+        serverNow: '2026-05-27T12:00:06.000Z',
+        triggeredAt: '2026-05-27T12:00:00.000Z',
+      },
+      {
+        effect: 'rapaz',
+        id: 'remote-rapaz',
+        serverNow: '2026-05-27T12:00:06.000Z',
+        triggeredAt: '2026-05-27T12:00:05.000Z',
+      },
+    ]);
+
+    render(<App />);
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(2_000);
+      await Promise.resolve();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(2_000);
+      await Promise.resolve();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(2_000);
+      await Promise.resolve();
+    });
+
+    expect(playMock).toHaveBeenCalledTimes(2);
+    expect(instances).toHaveLength(1);
+    expect(instances[0]?.src).toBe('/easter-eggs/rapaz-xaropinho.mp3');
+    expect(screen.getByLabelText('Denner Rapaz')).toBeInTheDocument();
+  });
+
   test.each([
     {
       ariaLabel: 'Denner UUII',
@@ -893,6 +943,12 @@ describe('App', () => {
       audioSrc: '/easter-eggs/rodrigo-faro-ele-gosta.mp3',
       effect: 'ele-gosta',
       label: 'ELE GOSTA!',
+    },
+    {
+      ariaLabel: 'Denner Brasil Sil Sil',
+      audioSrc: '/easter-eggs/jingle-goal-brasil-sil-sil.mp3',
+      effect: 'brasil-sil-sil',
+      label: 'BRASIL SIL SIL!',
     },
   ])(
     'aciona Denner $label remoto com áudio e placa corretos',
@@ -936,6 +992,47 @@ describe('App', () => {
       expect(instances[0]?.src).toBe(audioSrc);
     },
   );
+
+  test('mantém o Brasil Sil Sil visível até o fim do áudio', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-27T12:00:05.000Z'));
+    mockLiveRankingAndToastySignal([
+      {
+        effect: 'brasil-sil-sil',
+        id: 'remote-brasil-sil-sil',
+        serverNow: '2026-05-27T12:00:05.000Z',
+        triggeredAt: '2026-05-27T12:00:00.000Z',
+      },
+    ]);
+
+    render(<App />);
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(2_000);
+      await Promise.resolve();
+    });
+
+    expect(screen.getByLabelText('Denner Brasil Sil Sil')).toBeInTheDocument();
+
+    await act(async () => {
+      vi.advanceTimersByTime(5_200);
+    });
+
+    expect(screen.getByLabelText('Denner Brasil Sil Sil')).toBeInTheDocument();
+
+    await act(async () => {
+      vi.advanceTimersByTime(8_300);
+    });
+
+    expect(
+      screen.queryByLabelText('Denner Brasil Sil Sil'),
+    ).not.toBeInTheDocument();
+  });
 
   test('ignora comando remoto antigo recebido no primeiro polling da TV', async () => {
     vi.useFakeTimers();
@@ -1106,6 +1203,11 @@ describe('App', () => {
       button: 'Soltar Ele Gosta',
       effect: 'ele-gosta',
       message: 'Comando enviado. O Denner Ele Gosta vai aparecer na TV.',
+    },
+    {
+      button: 'Soltar Brasil Sil Sil',
+      effect: 'brasil-sil-sil',
+      message: 'Comando enviado. O Denner Brasil Sil Sil vai aparecer na TV.',
     },
   ])(
     'envia comando remoto $button pela tela de controle',

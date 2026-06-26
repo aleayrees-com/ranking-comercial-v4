@@ -89,7 +89,12 @@ type RankingDataState =
     };
 
 type RankingKind = 'closer' | 'sdr';
-type RemoteEffect = 'ele-gosta' | 'rapaz' | 'toasty' | 'uuii';
+type RemoteEffect =
+  | 'brasil-sil-sil'
+  | 'ele-gosta'
+  | 'rapaz'
+  | 'toasty'
+  | 'uuii';
 type ToastyControlState = 'idle' | 'sending' | 'sent' | 'error';
 type ToastyTriggerOptions = {
   readonly shouldPlaySound?: boolean;
@@ -101,6 +106,7 @@ interface RemoteEffectConfig {
   readonly buttonLabel: string;
   readonly label: string;
   readonly sentMessage: string;
+  readonly visibleMs?: number;
 }
 
 type PodiumItemStyle = CSSProperties & {
@@ -129,6 +135,7 @@ const SDR_PODIUM_EXCLUDED_MEMBER_IDS = new Set([
   'miguel-de-oliveira-guimaraes-vieira',
 ]);
 const ELE_GOSTA_AUDIO_SRC = '/easter-eggs/rodrigo-faro-ele-gosta.mp3';
+const BRASIL_SIL_SIL_AUDIO_SRC = '/easter-eggs/jingle-goal-brasil-sil-sil.mp3';
 const RAPAZ_AUDIO_SRC = '/easter-eggs/rapaz-xaropinho.mp3';
 const TOASTY_AUDIO_SRC = '/easter-eggs/denner-toasty-v2.mp3';
 const TOASTY_CONTROL_ENDPOINT = '/api/toasty';
@@ -144,8 +151,22 @@ const PODIUM_HEIGHT_BY_POSITION = {
   2: 208,
   3: 170,
 } as const;
-const REMOTE_EFFECTS = ['toasty', 'rapaz', 'uuii', 'ele-gosta'] as const;
-const REMOTE_EFFECT_CONFIG = {
+const REMOTE_EFFECTS = [
+  'toasty',
+  'rapaz',
+  'uuii',
+  'ele-gosta',
+  'brasil-sil-sil',
+] as const;
+const REMOTE_EFFECT_CONFIG: Record<RemoteEffect, RemoteEffectConfig> = {
+  'brasil-sil-sil': {
+    ariaLabel: 'Denner Brasil Sil Sil',
+    audioSrc: BRASIL_SIL_SIL_AUDIO_SRC,
+    buttonLabel: 'Soltar Brasil Sil Sil',
+    label: 'BRASIL SIL SIL!',
+    sentMessage: 'Comando enviado. O Denner Brasil Sil Sil vai aparecer na TV.',
+    visibleMs: 13_500,
+  },
   'ele-gosta': {
     ariaLabel: 'Denner Ele Gosta',
     audioSrc: ELE_GOSTA_AUDIO_SRC,
@@ -174,7 +195,7 @@ const REMOTE_EFFECT_CONFIG = {
     label: 'UUII!',
     sentMessage: 'Comando enviado. O Denner UUII vai aparecer na TV.',
   },
-} as const satisfies Record<RemoteEffect, RemoteEffectConfig>;
+};
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
@@ -244,14 +265,8 @@ export function App({
   const hideToastyTimeoutRef = useRef<number | undefined>(undefined);
   const lastToastySignalIdRef = useRef<string | null>(null);
   const blockedEffectRef = useRef<RemoteEffect>('toasty');
-  const effectAudioRefs = useRef<Record<RemoteEffect, HTMLAudioElement | null>>(
-    {
-      'ele-gosta': null,
-      rapaz: null,
-      toasty: null,
-      uuii: null,
-    },
-  );
+  const effectAudioRef = useRef<HTMLAudioElement | null>(null);
+  const currentAudioEffectRef = useRef<RemoteEffect | null>(null);
 
   const isToastyControl = useMemo(
     () =>
@@ -281,13 +296,19 @@ export function App({
   }, [dataState, selectedPeriod]);
 
   const getEffectAudio = useCallback((effect: RemoteEffect) => {
-    let audio = effectAudioRefs.current[effect];
+    let audio = effectAudioRef.current;
 
     if (!audio) {
-      audio = new Audio(REMOTE_EFFECT_CONFIG[effect].audioSrc);
+      audio = new Audio();
       audio.preload = 'auto';
       audio.volume = 0.9;
-      effectAudioRefs.current[effect] = audio;
+      effectAudioRef.current = audio;
+    }
+
+    if (currentAudioEffectRef.current !== effect) {
+      audio.src = REMOTE_EFFECT_CONFIG[effect].audioSrc;
+      audio.load();
+      currentAudioEffectRef.current = effect;
     }
 
     return audio;
@@ -312,9 +333,9 @@ export function App({
   );
 
   const stopEffectSound = useCallback((effect: RemoteEffect) => {
-    const audio = effectAudioRefs.current[effect];
+    const audio = effectAudioRef.current;
 
-    if (!audio) {
+    if (!audio || currentAudioEffectRef.current !== effect) {
       return;
     }
 
@@ -349,7 +370,7 @@ export function App({
         setVisibleEffect(null);
         stopEffectSound(effect);
         hideToastyTimeoutRef.current = undefined;
-      }, TOASTY_VISIBLE_MS);
+      }, REMOTE_EFFECT_CONFIG[effect].visibleMs ?? TOASTY_VISIBLE_MS);
     },
     [playEffectSound, stopEffectSound],
   );
