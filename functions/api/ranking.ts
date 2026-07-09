@@ -6,6 +6,7 @@ import {
   type GoogleSheetSourceInfo,
   type SheetRankingData,
 } from '../../src/domain/googleSheetSource.js';
+import type { InvestorProfile } from '../../src/domain/investors.js';
 import type { PeriodFilter, RawRankingRow } from '../../src/domain/ranking.js';
 
 const GOOGLE_SHEET_EDIT_URL = `https://docs.google.com/spreadsheets/d/${SOURCE_SPREADSHEET_ID}/edit?usp=sharing`;
@@ -37,6 +38,7 @@ type CloudflareRequestInit = RequestInit & {
 };
 
 interface RankingContext {
+  readonly env?: RankingApiEnv;
   readonly request?: Request;
 }
 
@@ -54,6 +56,27 @@ interface MonthlySheetRankingResult {
 interface MonthlySheetRankings {
   readonly results: readonly MonthlySheetRankingResult[];
   readonly skippedSheets: readonly GoogleSheetSourceInfo[];
+}
+
+interface RankingApiEnv {
+  readonly NEXT_PUBLIC_SUPABASE_ANON_KEY?: string;
+  readonly NEXT_PUBLIC_SUPABASE_URL?: string;
+  readonly SUPABASE_ANON_KEY?: string;
+  readonly SUPABASE_SERVICE_ROLE_KEY?: string;
+  readonly SUPABASE_URL?: string;
+}
+
+interface SupabaseConfig {
+  readonly apiKey: string;
+  readonly url: string;
+}
+
+interface SupabaseInvestorRow {
+  readonly ativo?: boolean | null;
+  readonly avatar_url?: string | null;
+  readonly email?: string | null;
+  readonly funcao?: string | null;
+  readonly nome?: string | null;
 }
 
 class RankingApiError extends Error {
@@ -84,9 +107,14 @@ export async function onRequestGet(
     }
 
     const payload = combineMonthlySheetPayloads(sheetRankings, monthlySheets);
+    const investors = await resolveDynamicInvestorProfiles(
+      payload.rows,
+      context.env,
+    );
 
     return jsonResponse({
       ...payload,
+      investors,
       fetchedAt: new Date().toISOString(),
     });
   } catch (error: unknown) {
@@ -274,6 +302,212 @@ function combineMonthlySheetPayloads(
   };
 }
 
+async function resolveDynamicInvestorProfiles(
+  rows: readonly RawRankingRow[],
+  env?: RankingApiEnv,
+): Promise<readonly InvestorProfile[]> {
+  const config = createSupabaseConfig(env);
+
+  if (!config || rows.length === 0) {
+    return [];
+  }
+
+  try {
+    const requestInit: CloudflareRequestInit = {
+      cf: {
+        cacheTtl: 300,
+      },
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        apikey: config.apiKey,
+      },
+    };
+    const response = await fetch(
+      createSupabaseInvestorsUrl(config.url),
+      requestInit,
+    );
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as unknown;
+
+    if (!Array.isArray(payload)) {
+      return [];
+    }
+
+    return createDynamicInvestorProfiles(
+      payload.filter(isSupabaseInvestorRow),
+      uniqueMemberNames(rows),
+    );
+  } catch {
+    return [];
+  }
+}
+
+function createSupabaseConfig(env?: RankingApiEnv): SupabaseConfig | null {
+  const url = (env?.SUPABASE_URL ?? env?.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
+  const apiKey = (
+    env?.SUPABASE_SERVICE_ROLE_KEY ??
+    env?.SUPABASE_ANON_KEY ??
+    env?.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+    ''
+  ).trim();
+
+  if (!url || !apiKey) {
+    return null;
+  }
+
+  try {
+    return {
+      apiKey,
+      url: new URL(url).origin,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function createSupabaseInvestorsUrl(baseUrl: string): string {
+  const url = new URL('/rest/v1/investidores', baseUrl);
+  url.searchParams.set('select', 'nome,email,avatar_url,funcao,ativo');
+  url.searchParams.set('avatar_url', 'not.is.null');
+  url.searchParams.set('limit', '1000');
+
+  return url.toString();
+}
+
+function uniqueMemberNames(rows: readonly RawRankingRow[]): readonly string[] {
+  return Array.from(
+    new Set(
+      rows
+        .map((row) => row.memberName.trim())
+        .filter((name) => name.length > 0),
+    ),
+  );
+}
+
+function createDynamicInvestorProfiles(
+  rows: readonly SupabaseInvestorRow[],
+  memberNames: readonly string[],
+): readonly InvestorProfile[] {
+  const profilesById = new Map<string, InvestorProfile>();
+
+  for (const row of rows) {
+    const name = row.nome?.replace(/\s+/g, ' ').trim();
+    const imagePath = sanitizeAvatarUrl(row.avatar_url);
+
+    if (!name || !imagePath) {
+      continue;
+    }
+
+    const aliases = memberNames.filter((memberName) =>
+      matchesSupabaseInvestor(row, memberName),
+    );
+
+    if (aliases.length === 0) {
+      continue;
+    }
+
+    const id = createInvestorId(name, row.email);
+    const existing = profilesById.get(id);
+    const profile: InvestorProfile = {
+      id,
+      name,
+      aliases: uniqueStrings([...(existing?.aliases ?? []), ...aliases]),
+      roleLabel: normalizeRoleLabel(row.funcao),
+      status: row.ativo === false ? 'inactive' : 'active',
+      imagePath,
+    };
+
+    profilesById.set(id, profile);
+  }
+
+  return Array.from(profilesById.values());
+}
+
+function matchesSupabaseInvestor(
+  row: SupabaseInvestorRow,
+  memberName: string,
+): boolean {
+  const memberKey = normalizeLookupKey(memberName);
+  const memberCompactKey = normalizeCompactKey(memberName);
+  const rowNameKey = normalizeLookupKey(row.nome ?? '');
+  const rowNameCompactKey = normalizeCompactKey(row.nome ?? '');
+  const emailName = (row.email ?? '').split('@')[0] ?? '';
+  const emailKey = normalizeLookupKey(emailName);
+  const emailCompactKey = normalizeCompactKey(emailName);
+
+  if (!memberKey || !memberCompactKey) {
+    return false;
+  }
+
+  return (
+    rowNameKey === memberKey ||
+    rowNameKey.includes(memberKey) ||
+    memberKey.includes(rowNameKey) ||
+    rowNameCompactKey === memberCompactKey ||
+    rowNameCompactKey.includes(memberCompactKey) ||
+    emailKey === memberKey ||
+    emailCompactKey === memberCompactKey
+  );
+}
+
+function sanitizeAvatarUrl(value: string | null | undefined): string | null {
+  const rawValue = value?.trim();
+
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    const url = new URL(rawValue);
+
+    return url.protocol === 'https:' || url.protocol === 'http:'
+      ? url.toString()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function createInvestorId(name: string, email: string | null | undefined) {
+  const base = normalizeLookupKey(name) || normalizeLookupKey(email ?? '');
+
+  return base.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function normalizeRoleLabel(
+  value: string | null | undefined,
+): string | undefined {
+  const label = value?.trim();
+
+  return label ? label.toUpperCase() : undefined;
+}
+
+function uniqueStrings(values: readonly string[]): readonly string[] {
+  return Array.from(new Set(values.map((value) => value.trim()))).filter(
+    (value) => value.length > 0,
+  );
+}
+
+function isSupabaseInvestorRow(value: unknown): value is SupabaseInvestorRow {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    isOptionalString(value.nome) &&
+    isOptionalString(value.email) &&
+    isOptionalString(value.avatar_url) &&
+    isOptionalString(value.funcao) &&
+    (value.ativo === undefined ||
+      value.ativo === null ||
+      typeof value.ativo === 'boolean')
+  );
+}
+
 function createPeriodFilterFromSheet(sheet: MonthlyCdrSheet): PeriodFilter {
   return {
     end: sheet.end,
@@ -406,4 +640,26 @@ function normalizeKey(value: string | undefined): string {
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
+}
+
+function normalizeLookupKey(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function normalizeCompactKey(value: string): string {
+  return normalizeLookupKey(value).replace(/\s+/g, '');
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isOptionalString(value: unknown): value is string | null | undefined {
+  return value === undefined || value === null || typeof value === 'string';
 }

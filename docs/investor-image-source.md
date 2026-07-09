@@ -16,17 +16,17 @@
 
 ## Regra de uso no ranking
 
-- A UI lê `src/data/investorProfiles.ts`.
-- O ranking tenta casar o nome do integrante com `name` ou `aliases`.
-- Quando existe imagem, a foto local é exibida.
+- A API `functions/api/ranking.ts` pode consultar `public.investidores.avatar_url` server-side quando o ambiente Cloudflare tiver `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY`.
+- A API filtra os perfis usando somente nomes encontrados na planilha do período carregado e devolve o campo `investors` junto com as linhas do ranking.
+- A UI combina os perfis dinâmicos da API com `src/data/investorProfiles.ts`, mantendo os aliases e fotos locais como fallback.
+- Quando existe imagem dinâmica ou local, a foto é exibida.
 - Quando não existe imagem, a interface usa iniciais estáveis do integrante.
 
-## Integração futura
+## Variáveis de ambiente
 
-Antes de trocar a fixture por integração em tempo real, confirmar uma das opções:
+- `SUPABASE_URL`: URL do projeto Supabase.
+- `SUPABASE_SERVICE_ROLE_KEY`: chave server-side usada somente na Function.
 
-- `investidores.avatar_url` como fonte de verdade, quando a URL já for pública ou assinada.
-- `storage.objects` no bucket privado `avatars`, gerando signed URL server-side.
-- `auth.users.raw_user_meta_data.avatar_url` como fallback para fotos Google.
+Fallbacks aceitos pelo código, caso já existam no ambiente: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_ANON_KEY` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 
 Não expor service role key, signed URL longa ou dump bruto de `backup-supabase/02_data.sql` em documentação ou código front-end.

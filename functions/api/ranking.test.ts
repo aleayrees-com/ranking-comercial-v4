@@ -127,6 +127,91 @@ describe('/api/ranking', () => {
     ).toBe(false);
   });
 
+  test('returns dynamic investor profiles from Supabase using only server-side env', async () => {
+    const fetchMock = vi.fn(
+      async (url: string | URL | Request, init?: RequestInit) => {
+        const value = String(url);
+
+        if (value.includes('/edit?usp=sharing')) {
+          return new Response(
+            [createSheetMetadataFragment('1368144463', 'CDR JUNHO/26')].join(
+              ',',
+            ),
+            { status: 200 },
+          );
+        }
+
+        if (value.includes('gid=1368144463')) {
+          return new Response(
+            createCsv([
+              row({ 0: 'DATA INÍCIO:', 1: '01/06/2026' }),
+              row({ 0: 'DATA FIM:', 1: '30/06/2026' }),
+              row({ 200: 'META', 201: 'Leticia de Oliveira' }),
+              row({ 200: 'REALIZADO', 201: '4' }),
+            ]),
+            { status: 200 },
+          );
+        }
+
+        if (value.includes('supabase.example/rest/v1/investidores')) {
+          expect(init?.headers).toEqual(
+            expect.objectContaining({
+              Authorization: 'Bearer server-side-secret',
+              apikey: 'server-side-secret',
+            }),
+          );
+
+          return new Response(
+            JSON.stringify([
+              {
+                avatar_url: 'https://images.example/leticia.png',
+                email: 'leticia.chebom@v4company.com',
+                funcao: 'BDR',
+                nome: 'Leticia de Oliveira Chebom',
+                ativo: true,
+              },
+            ]),
+            {
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              status: 200,
+            },
+          );
+        }
+
+        return new Response('not found', { status: 404 });
+      },
+    );
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await onRequestGet({
+      env: {
+        SUPABASE_SERVICE_ROLE_KEY: 'server-side-secret',
+        SUPABASE_URL: 'https://supabase.example',
+      },
+    });
+    const responseText = await response.text();
+    const payload = JSON.parse(responseText) as {
+      readonly investors: readonly {
+        readonly aliases?: readonly string[];
+        readonly imagePath?: string;
+        readonly name: string;
+      }[];
+    };
+
+    expect(response.status).toBe(200);
+    expect(payload.investors).toEqual([
+      expect.objectContaining({
+        aliases: expect.arrayContaining(['Leticia de Oliveira']),
+        imagePath: 'https://images.example/leticia.png',
+        name: 'Leticia de Oliveira Chebom',
+      }),
+    ]);
+    expect(responseText).not.toContain('server-side-secret');
+  });
+
   test('loads only requested monthly CSV when period is selected', async () => {
     const fetchMock = vi.fn(async (url: string | URL | Request) => {
       const value = String(url);

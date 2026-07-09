@@ -43,6 +43,7 @@ interface AppProps {
 }
 
 interface RankingFixtureModule {
+  readonly investors?: unknown;
   readonly rankingRows?: unknown;
   readonly rows?: unknown;
   readonly periodFilters?: unknown;
@@ -51,6 +52,7 @@ interface RankingFixtureModule {
 }
 
 interface RankingApiPayload {
+  readonly investors?: unknown;
   readonly rows?: unknown;
   readonly periodFilters?: unknown;
   readonly periods?: unknown;
@@ -83,6 +85,7 @@ type RankingDataState =
     }
   | {
       readonly status: 'ready';
+      readonly investors: readonly InvestorProfile[];
       readonly periods: readonly PeriodFilter[];
       readonly rows: readonly RawRankingRow[];
       readonly sourceInfo?: SourceInfo;
@@ -113,6 +116,7 @@ interface RemoteEffectConfig {
 type PodiumItemStyle = CSSProperties & {
   readonly '--podium-fill': string;
   readonly '--podium-height': string;
+  readonly '--podium-order': string;
 };
 
 const DEFAULT_PERIODS: readonly PeriodFilter[] = [
@@ -152,6 +156,15 @@ const PODIUM_HEIGHT_BY_POSITION = {
   1: 304,
   2: 208,
   3: 170,
+  4: 136,
+  5: 112,
+} as const;
+const PODIUM_VISUAL_ORDER_BY_POSITION = {
+  1: 3,
+  2: 2,
+  3: 4,
+  4: 1,
+  5: 5,
 } as const;
 const REMOTE_EFFECTS = [
   'toasty',
@@ -261,7 +274,14 @@ export function App({
     () => (dataState.status === 'ready' ? dataState.periods : []),
     [dataState],
   );
-  const investors = initialInvestors ?? investorProfiles;
+  const investors = useMemo(
+    () =>
+      initialInvestors ??
+      (dataState.status === 'ready'
+        ? mergeInvestorProfiles(investorProfiles, dataState.investors)
+        : investorProfiles),
+    [dataState, initialInvestors],
+  );
   const requestedPeriodMonth = useMemo(getRequestedPeriodMonth, []);
   const hasManualPeriodSelectionRef = useRef(false);
 
@@ -673,7 +693,7 @@ export function App({
             <p className="eyebrow">Coordenação de Receita</p>
             <h1 id="dashboard-title">Ranking de Closer e SDR</h1>
             <p className="header-copy">
-              Visão operacional por período, com pódio dos três primeiros,
+              Visão operacional por período, com pódio dos cinco primeiros,
               ranking completo e leitura rápida para tomada de decisão.
             </p>
           </div>
@@ -987,7 +1007,7 @@ function RankingPanel({
       </div>
 
       {topEntries.length > 0 ? (
-        <ol className="podium-list" aria-label={`Top 3 ${title}`}>
+        <ol className="podium-list" aria-label={`Top 5 ${title}`}>
           {topEntries.map((entry) => (
             <PodiumItem
               active={activeId === entry.memberId}
@@ -1086,7 +1106,7 @@ function PodiumItem({
           <span className="podium-secondary">
             {kind === 'closer'
               ? `${formatNumber(entry.logos)} logos`
-              : `${formatNumber(entry.meetingsHeld)} reuniões`}
+              : formatMeetingsLabel(entry.meetingsHeld)}
           </span>
           {leadText ? <span className="podium-lead">{leadText}</span> : null}
         </span>
@@ -1184,54 +1204,91 @@ function RankingTable({
   readonly kind: RankingKind;
   readonly title: string;
 }) {
+  const maxMeetingsHeld = Math.max(
+    1,
+    ...entries.map((entry) => entry.meetingsHeld),
+  );
+
   return (
-    <div className="table-scroll">
-      <table>
-        <caption className="sr-only">Lista completa de {title}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Pos.</th>
-            <th scope="col">Integrante</th>
-            {kind === 'closer' ? (
-              <>
-                <th scope="col">Receita</th>
-                <th scope="col">Logos</th>
-              </>
-            ) : (
-              <th scope="col">Reuniões</th>
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {entries.length > 0 ? (
-            entries.map((entry) => (
-              <tr key={entry.memberId}>
-                <td>{entry.position}º</td>
-                <td>
-                  <div className="member-cell">
-                    {getMemberInvestorImage(investors, entry)}
-                    <strong>{entry.memberName}</strong>
-                  </div>
-                </td>
-                {kind === 'closer' ? (
-                  <>
-                    <td>{formatCurrency(entry.revenue)}</td>
-                    <td>{formatNumber(entry.logos)}</td>
-                  </>
-                ) : (
-                  <td>{formatNumber(entry.meetingsHeld)}</td>
-                )}
-              </tr>
-            ))
-          ) : (
+    <div className="ranking-table-card">
+      <div className="ranking-table-heading">
+        <h3>Classificação geral</h3>
+      </div>
+      <div className="table-scroll">
+        <table>
+          <caption className="sr-only">Lista completa de {title}</caption>
+          <thead>
             <tr>
-              <td colSpan={kind === 'closer' ? 4 : 3}>
-                Sem linhas válidas para listar neste período.
-              </td>
+              <th scope="col">Pos.</th>
+              <th scope="col">Integrante</th>
+              {kind === 'closer' ? (
+                <>
+                  <th scope="col">Receita</th>
+                  <th scope="col">Logos</th>
+                </>
+              ) : (
+                <>
+                  <th scope="col">Reuniões</th>
+                  <th scope="col">Progresso</th>
+                </>
+              )}
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {entries.length > 0 ? (
+              entries.map((entry) => (
+                <tr key={entry.memberId}>
+                  <td className={`rank-cell rank-cell--${entry.position}`}>
+                    {entry.position}º
+                  </td>
+                  <td>
+                    <div className="member-cell">
+                      {getMemberInvestorImage(investors, entry)}
+                      <strong>{entry.memberName}</strong>
+                    </div>
+                  </td>
+                  {kind === 'closer' ? (
+                    <>
+                      <td>{formatCurrency(entry.revenue)}</td>
+                      <td>{formatNumber(entry.logos)}</td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="meet-count">
+                        {formatNumber(entry.meetingsHeld)}
+                      </td>
+                      <td>
+                        <div
+                          aria-label={`Progresso de ${entry.memberName}`}
+                          aria-valuemax={maxMeetingsHeld}
+                          aria-valuemin={0}
+                          aria-valuenow={entry.meetingsHeld}
+                          className="ranking-progress"
+                          role="progressbar"
+                        >
+                          <span
+                            style={{
+                              width: `${Math.round(
+                                (entry.meetingsHeld / maxMeetingsHeld) * 100,
+                              )}%`,
+                            }}
+                          />
+                        </div>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={4}>
+                  Sem linhas válidas para listar neste período.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -1291,6 +1348,7 @@ async function loadRankingFixture(): Promise<RankingDataState> {
   const periods = extractPeriods(module);
 
   return createReadyState({
+    investors: extractInvestors(module),
     periods,
     rows,
     sourceInfo: extractSourceInfo(module.sourceSpreadsheet),
@@ -1329,6 +1387,7 @@ async function loadLiveRankingData(
   const periods = extractPeriods(payload);
 
   return createReadyState({
+    investors: extractInvestors(payload),
     periods,
     rows,
     sourceInfo: extractSourceInfo(payload.sourceSpreadsheet),
@@ -1399,9 +1458,11 @@ function isRecentToastySignal(
 
 function createReadyState({
   periods,
+  investors,
   rows,
   sourceInfo,
 }: {
+  readonly investors?: readonly InvestorProfile[];
   readonly periods?: readonly PeriodFilter[];
   readonly rows: readonly RawRankingRow[];
   readonly sourceInfo?: SourceInfo;
@@ -1409,6 +1470,7 @@ function createReadyState({
   if (periods && periods.length > 0) {
     return {
       status: 'ready',
+      investors: investors ?? [],
       periods: sortPeriodsDescending(periods.map(normalizePeriodFilter)),
       rows,
       sourceInfo,
@@ -1417,6 +1479,7 @@ function createReadyState({
 
   return {
     status: 'ready',
+    investors: investors ?? [],
     periods: mergePeriodFilters(DEFAULT_PERIODS, [], rows),
     rows,
     sourceInfo,
@@ -1447,6 +1510,18 @@ function extractPeriods(module: RankingFixtureModule): readonly PeriodFilter[] {
   }
 
   return periods.filter(isPeriodFilter);
+}
+
+function extractInvestors(
+  module: RankingFixtureModule | RankingApiPayload,
+): readonly InvestorProfile[] {
+  const investors = module.investors;
+
+  if (!Array.isArray(investors)) {
+    return [];
+  }
+
+  return investors.filter(isInvestorProfile);
 }
 
 function extractSourceInfo(value: unknown): SourceInfo | undefined {
@@ -1487,12 +1562,45 @@ function isPeriodFilter(value: unknown): value is PeriodFilter {
   );
 }
 
+function isInvestorProfile(value: unknown): value is InvestorProfile {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.name === 'string' &&
+    isInvestorStatus(value.status) &&
+    (value.aliases === undefined ||
+      (Array.isArray(value.aliases) &&
+        value.aliases.every((alias) => typeof alias === 'string'))) &&
+    (value.roleLabel === undefined || typeof value.roleLabel === 'string') &&
+    (value.imagePath === undefined || typeof value.imagePath === 'string')
+  );
+}
+
+function isInvestorStatus(value: unknown): value is InvestorProfile['status'] {
+  return value === 'active' || value === 'watch' || value === 'inactive';
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
 function isOptionalNumber(value: unknown): boolean {
   return value === undefined || value === null || typeof value === 'number';
+}
+
+function mergeInvestorProfiles(
+  localProfiles: readonly InvestorProfile[],
+  dynamicProfiles: readonly InvestorProfile[],
+): readonly InvestorProfile[] {
+  const profilesById = new Map<string, InvestorProfile>();
+
+  for (const profile of [...dynamicProfiles, ...localProfiles]) {
+    if (!profilesById.has(profile.id)) {
+      profilesById.set(profile.id, profile);
+    }
+  }
+
+  return Array.from(profilesById.values());
 }
 
 function mergePeriodFilters(
@@ -1601,7 +1709,7 @@ function getPrimaryMetric(entry: RankingEntry, kind: RankingKind): string {
     return formatCurrency(entry.revenue);
   }
 
-  return `${formatNumber(entry.meetingsHeld)} reuniões`;
+  return formatMeetingsLabel(entry.meetingsHeld);
 }
 
 function getRankingMetricValue(entry: RankingEntry, kind: RankingKind): number {
@@ -1619,13 +1727,15 @@ function getPodiumEntries(
         )
       : entries;
 
-  return eligibleEntries.slice(0, 3).map((entry, index) => ({
+  return eligibleEntries.slice(0, 5).map((entry, index) => ({
     ...entry,
     position: index + 1,
   }));
 }
 
-function getPodiumMetal(position: number): 'gold' | 'silver' | 'bronze' {
+function getPodiumMetal(
+  position: number,
+): 'gold' | 'silver' | 'bronze' | 'slate' {
   if (position === 1) {
     return 'gold';
   }
@@ -1634,7 +1744,11 @@ function getPodiumMetal(position: number): 'gold' | 'silver' | 'bronze' {
     return 'silver';
   }
 
-  return 'bronze';
+  if (position === 3) {
+    return 'bronze';
+  }
+
+  return 'slate';
 }
 
 function getPodiumItemStyle(
@@ -1654,11 +1768,16 @@ function getPodiumItemStyle(
     PODIUM_HEIGHT_BY_POSITION[
       entry.position as keyof typeof PODIUM_HEIGHT_BY_POSITION
     ] ?? PODIUM_HEIGHT_BY_POSITION[3];
+  const order =
+    PODIUM_VISUAL_ORDER_BY_POSITION[
+      entry.position as keyof typeof PODIUM_VISUAL_ORDER_BY_POSITION
+    ] ?? entry.position;
   const fill = Math.round(18 + share * 76);
 
   return {
     '--podium-fill': `${fill}%`,
     '--podium-height': `${height}px`,
+    '--podium-order': String(order),
   };
 }
 
@@ -1685,7 +1804,7 @@ function getPodiumLeadText(
     return `+${formatCurrency(difference)} sobre o 2º`;
   }
 
-  return `+${formatNumber(difference)} reuniões sobre o 2º`;
+  return `+${formatMeetingsLabel(difference)} sobre o 2º`;
 }
 
 function formatCurrency(value: number): string {
@@ -1694,4 +1813,8 @@ function formatCurrency(value: number): string {
 
 function formatNumber(value: number): string {
   return numberFormatter.format(value);
+}
+
+function formatMeetingsLabel(value: number): string {
+  return `${formatNumber(value)} ${value === 1 ? 'reunião' : 'reuniões'}`;
 }

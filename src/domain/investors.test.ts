@@ -4,6 +4,7 @@ import {
   getInvestorInitials,
   type InvestorProfile,
 } from './investors.js';
+import { investorProfiles } from '../data/investorProfiles.js';
 
 const profiles: readonly InvestorProfile[] = [
   {
@@ -37,5 +38,31 @@ describe('investors', () => {
   test('calcula iniciais estáveis para fallback visual', () => {
     expect(getInvestorInitials('Wilson de Carvalho Junior')).toBe('WJ');
     expect(getInvestorInitials('')).toBe('IV');
+  });
+
+  test('resolve fotos locais dos novos nomes de SDR/BDR da planilha', () => {
+    const sheetNames = [
+      'Leticia de Oliveira',
+      'Tiago Lavinas',
+      'Caio Henrique',
+      'Daniel Dias',
+      'Joao Carlos',
+      'Paula Cristina',
+      'Raphaela Reis',
+      'Vinicius Lopes',
+      'Wendel de Araujo',
+    ];
+
+    expect(
+      sheetNames.map((name) => ({
+        name,
+        imagePath: findInvestorProfile(investorProfiles, name)?.imagePath,
+      })),
+    ).toEqual(
+      sheetNames.map((name) => ({
+        name,
+        imagePath: expect.stringMatching(/^\/investors\/.+\.(jpe?g|png)$/),
+      })),
+    );
   });
 });

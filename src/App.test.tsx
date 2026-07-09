@@ -282,6 +282,102 @@ describe('App', () => {
     ).not.toBeNull();
   });
 
+  test('usa fotos locais dos novos SDRs e BDRs da planilha', () => {
+    const { container } = render(
+      <App
+        initialRows={[
+          {
+            period: '2026-05-31',
+            role: 'sdr',
+            memberId: 'sdr-leticia-de-oliveira',
+            memberName: 'Leticia de Oliveira',
+            meetingsHeld: 4,
+            sourceChannel: '',
+          },
+          {
+            period: '2026-05-31',
+            role: 'sdr',
+            memberId: 'sdr-tiago-lavinas',
+            memberName: 'Tiago Lavinas',
+            meetingsHeld: 3,
+            sourceChannel: '',
+          },
+          {
+            period: '2026-05-31',
+            role: 'sdr',
+            memberId: 'sdr-caio-henrique',
+            memberName: 'Caio Henrique',
+            meetingsHeld: 2,
+            sourceChannel: '',
+          },
+          {
+            period: '2026-05-31',
+            role: 'sdr',
+            memberId: 'sdr-daniel-dias',
+            memberName: 'Daniel Dias',
+            meetingsHeld: 1,
+            sourceChannel: '',
+          },
+          {
+            period: '2026-05-31',
+            role: 'sdr',
+            memberId: 'sdr-joao-carlos',
+            memberName: 'Joao Carlos',
+            meetingsHeld: 1,
+            sourceChannel: '',
+          },
+          {
+            period: '2026-05-31',
+            role: 'sdr',
+            memberId: 'sdr-paula-cristina',
+            memberName: 'Paula Cristina',
+            meetingsHeld: 0,
+            sourceChannel: '',
+          },
+          {
+            period: '2026-05-31',
+            role: 'sdr',
+            memberId: 'sdr-raphaela-reis',
+            memberName: 'Raphaela Reis',
+            meetingsHeld: 0,
+            sourceChannel: '',
+          },
+          {
+            period: '2026-05-31',
+            role: 'sdr',
+            memberId: 'sdr-vinicius-lopes',
+            memberName: 'Vinicius Lopes',
+            meetingsHeld: 0,
+            sourceChannel: '',
+          },
+          {
+            period: '2026-05-31',
+            role: 'sdr',
+            memberId: 'sdr-wendel-de-araujo',
+            memberName: 'Wendel de Araujo',
+            meetingsHeld: 0,
+            sourceChannel: '',
+          },
+        ]}
+        initialPeriods={mayAprilPeriods}
+      />,
+    );
+
+    [
+      '/investors/34-leticia-de-oliveira-chebom.png',
+      '/investors/35-tiago-lavinas-da-silva-souza.jpg',
+      '/investors/36-caio-henrique-guilherme-vieira-pentiado.png',
+      '/investors/37-daniel-dias-do-nascimento.png',
+      '/investors/38-joao-carlos-de-oliveira-costa.jpg',
+      '/investors/39-paula-cristina-jesus-nunes-de-oliveira.png',
+      '/investors/40-raphaela-reis-da-costa-moreira.png',
+      '/investors/41-vinicius-lopes-de-oliveira.png',
+      '/investors/42-wendel-de-araujo-veiga.png',
+    ].forEach((imagePath) => {
+      expect(container.querySelector(`img[src="${imagePath}"]`)).not.toBeNull();
+    });
+  });
+
   test('usa iniciais quando o integrante da planilha não tem imagem local', () => {
     render(
       <App
@@ -503,7 +599,7 @@ describe('App', () => {
     );
 
     const sdrPanel = screen.getByRole('region', { name: 'SDR / Pré-vendas' });
-    const sdrPodium = screen.getByLabelText('Top 3 SDR / Pré-vendas');
+    const sdrPodium = screen.getByLabelText('Top 5 SDR / Pré-vendas');
     const sdrTable = within(sdrPanel).getByRole('table', {
       name: 'Lista completa de SDR / Pré-vendas',
     });
@@ -531,6 +627,155 @@ describe('App', () => {
     expect(within(sdrPodium).getByTestId('podium-sdr-3')).toHaveTextContent(
       'Matheus Caruzo',
     );
+  });
+
+  test('renderiza top 5 de SDRs na ordem visual do HTML de referência', () => {
+    render(
+      <App
+        initialRows={[
+          {
+            period: '2026-06-02',
+            role: 'sdr',
+            memberId: 'lucas-macedo',
+            memberName: 'Lucas Macedo',
+            meetingsHeld: 20,
+            sourceChannel: 'Lead Broker',
+          },
+          {
+            period: '2026-06-02',
+            role: 'sdr',
+            memberId: 'lucas-moura',
+            memberName: 'Lucas Moura',
+            meetingsHeld: 18,
+            sourceChannel: 'Lead Broker',
+          },
+          {
+            period: '2026-06-02',
+            role: 'sdr',
+            memberId: 'sdr-emanuella',
+            memberName: 'Emanuella',
+            meetingsHeld: 8,
+            sourceChannel: 'Lead Broker',
+          },
+          {
+            period: '2026-06-02',
+            role: 'sdr',
+            memberId: 'sdr-pedro-paulo',
+            memberName: 'Pedro Paulo',
+            meetingsHeld: 7,
+            sourceChannel: 'Lead Broker',
+          },
+          {
+            period: '2026-06-02',
+            role: 'sdr',
+            memberId: 'sdr-matheus-caruzo',
+            memberName: 'Matheus Caruzo',
+            meetingsHeld: 6,
+            sourceChannel: 'Lead Broker',
+          },
+          {
+            period: '2026-06-02',
+            role: 'sdr',
+            memberId: 'sdr-novo',
+            memberName: 'Novo SDR',
+            meetingsHeld: 5,
+            sourceChannel: 'Lead Broker',
+          },
+          {
+            period: '2026-06-02',
+            role: 'sdr',
+            memberId: 'sdr-novo-bdr',
+            memberName: 'Novo BDR',
+            meetingsHeld: 4,
+            sourceChannel: 'Lead Broker',
+          },
+          {
+            period: '2026-06-02',
+            role: 'sdr',
+            memberId: 'sdr-extra',
+            memberName: 'Extra SDR',
+            meetingsHeld: 3,
+            sourceChannel: 'Lead Broker',
+          },
+        ]}
+        initialPeriods={[periods[2]]}
+      />,
+    );
+
+    const sdrPodium = screen.getByLabelText('Top 5 SDR / Pré-vendas');
+
+    expect(
+      within(sdrPodium).queryByText('Lucas Macedo'),
+    ).not.toBeInTheDocument();
+    expect(
+      within(sdrPodium).queryByText('Lucas Moura'),
+    ).not.toBeInTheDocument();
+    expect(within(sdrPodium).getByTestId('podium-sdr-1')).toHaveTextContent(
+      'Emanuella',
+    );
+    expect(within(sdrPodium).getByTestId('podium-sdr-2')).toHaveTextContent(
+      'Pedro Paulo',
+    );
+    expect(within(sdrPodium).getByTestId('podium-sdr-3')).toHaveTextContent(
+      'Matheus Caruzo',
+    );
+    expect(within(sdrPodium).getByTestId('podium-sdr-4')).toHaveTextContent(
+      'Novo SDR',
+    );
+    expect(within(sdrPodium).getByTestId('podium-sdr-5')).toHaveTextContent(
+      'Novo BDR',
+    );
+    expect(
+      within(sdrPodium)
+        .getByTestId('podium-sdr-4')
+        .style.getPropertyValue('--podium-order'),
+    ).toBe('1');
+    expect(
+      within(sdrPodium)
+        .getByTestId('podium-sdr-2')
+        .style.getPropertyValue('--podium-order'),
+    ).toBe('2');
+    expect(
+      within(sdrPodium)
+        .getByTestId('podium-sdr-1')
+        .style.getPropertyValue('--podium-order'),
+    ).toBe('3');
+    expect(
+      within(sdrPodium)
+        .getByTestId('podium-sdr-3')
+        .style.getPropertyValue('--podium-order'),
+    ).toBe('4');
+    expect(
+      within(sdrPodium)
+        .getByTestId('podium-sdr-5')
+        .style.getPropertyValue('--podium-order'),
+    ).toBe('5');
+  });
+
+  test('mostra progresso na tabela de SDRs sem reintroduzir Canal', () => {
+    render(
+      <App
+        initialRows={rowsWithJune}
+        initialPeriods={[periods[2], periods[0]]}
+      />,
+    );
+
+    const sdrPanel = screen.getByRole('region', { name: 'SDR / Pré-vendas' });
+    const sdrTable = within(sdrPanel).getByRole('table', {
+      name: 'Lista completa de SDR / Pré-vendas',
+    });
+
+    expect(
+      within(sdrTable).getByRole('columnheader', { name: 'Progresso' }),
+    ).toBeInTheDocument();
+    expect(
+      within(sdrTable).getByRole('progressbar', {
+        name: 'Progresso de Emanuella',
+      }),
+    ).toHaveAttribute('aria-valuenow', '4');
+    expect(
+      within(sdrTable).queryByRole('columnheader', { name: 'Canal' }),
+    ).not.toBeInTheDocument();
   });
 
   test('não exibe coluna de canal nas tabelas do ranking', () => {
@@ -646,6 +891,58 @@ describe('App', () => {
     expect(screen.getAllByText('R$ 42.000')).not.toHaveLength(0);
   });
 
+  test('usa fotos dinâmicas retornadas pela API para novos integrantes', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            investors: [
+              {
+                id: 'nova-sdr',
+                name: 'Nova SDR Completa',
+                aliases: ['Nova SDR'],
+                roleLabel: 'BDR',
+                status: 'active',
+                imagePath: 'https://images.example/nova-sdr.png',
+              },
+            ],
+            periods: [
+              {
+                label: 'Maio/2026',
+                start: '2026-05-01',
+                end: '2026-05-31',
+              },
+            ],
+            rows: [
+              {
+                period: '2026-05-31',
+                role: 'sdr',
+                memberId: 'sdr-nova-sdr',
+                memberName: 'Nova SDR',
+                meetingsHeld: 3,
+                sourceChannel: '',
+              },
+            ],
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            status: 200,
+          },
+        ),
+      ),
+    );
+
+    const { container } = render(<App />);
+
+    expect(await screen.findAllByText('Nova SDR')).not.toHaveLength(0);
+    expect(
+      container.querySelector('img[src="https://images.example/nova-sdr.png"]'),
+    ).not.toBeNull();
+  });
+
   test('atualiza dados da API automaticamente sem recarregar a página', async () => {
     const fetchMock = vi
       .fn()
@@ -742,8 +1039,8 @@ describe('App', () => {
   test('mantém altura visual do pódio por posição', () => {
     render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
-    const closerPodium = screen.getByLabelText('Top 3 Closers');
-    const sdrPodium = screen.getByLabelText('Top 3 SDR / Pré-vendas');
+    const closerPodium = screen.getByLabelText('Top 5 Closers');
+    const sdrPodium = screen.getByLabelText('Top 5 SDR / Pré-vendas');
     const firstPlace = within(closerPodium).getByTestId('podium-closer-1');
     const secondPlace = within(closerPodium).getByTestId('podium-closer-2');
     const thirdPlace = within(closerPodium).getByTestId('podium-closer-3');
@@ -1340,7 +1637,7 @@ describe('App', () => {
   test('renderiza bases de pódio com metais por posição', () => {
     render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
-    const closerPodium = screen.getByLabelText('Top 3 Closers');
+    const closerPodium = screen.getByLabelText('Top 5 Closers');
 
     expect(
       within(closerPodium)
@@ -1363,7 +1660,7 @@ describe('App', () => {
     const user = userEvent.setup();
     render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
-    const closerPodium = screen.getByLabelText('Top 3 Closers');
+    const closerPodium = screen.getByLabelText('Top 5 Closers');
     const firstButton = within(
       within(closerPodium).getByTestId('podium-closer-1'),
     ).getByRole('button');

@@ -28,10 +28,11 @@ describe('Toasty layout', () => {
     expect(shortTvRule).toContain('bottom: clamp(12px, 4dvh, 36px)');
   });
 
-  test('keeps the expanded podium crown below the header on short TVs', () => {
+  test('keeps the expanded podium centered without overlapping the table on short TVs', () => {
     const css = readFileSync(resolve(repoRoot, 'src/styles.css'), 'utf8');
 
-    expect(css).toContain('padding-top: clamp(144px, 18vh, 188px)');
+    expect(css).toContain('grid-column: var(--podium-order)');
+    expect(css).toContain('padding-top: clamp(82px, 13vh, 120px)');
   });
 
   test('avoids CSS filters on the Denner image for TV browser compatibility', () => {
