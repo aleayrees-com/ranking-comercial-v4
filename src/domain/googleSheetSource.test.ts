@@ -51,7 +51,7 @@ describe('parseGoogleSheetRankingCsv', () => {
       expect.objectContaining({
         role: 'closer',
         memberId: 'lucas-macedo',
-        memberName: 'Lucas Macedo',
+        memberName: 'Macedo Lucas Rodrigues',
         revenue: 126699,
         logos: 7,
       }),
@@ -65,7 +65,7 @@ describe('parseGoogleSheetRankingCsv', () => {
       expect.objectContaining({
         role: 'sdr',
         memberId: 'lucas-moura',
-        memberName: 'Lucas Moura',
+        memberName: 'Lucas Vieira',
         meetingsHeld: 15,
       }),
       expect.objectContaining({
@@ -77,10 +77,132 @@ describe('parseGoogleSheetRankingCsv', () => {
       expect.objectContaining({
         role: 'sdr',
         memberId: 'lucas-macedo',
-        memberName: 'Lucas Macedo',
+        memberName: 'Macedo Lucas Rodrigues',
         meetingsHeld: 1,
       }),
     ]);
+  });
+
+  test('includes a new closer from the official revenue and sales summary without hardcoded membership', () => {
+    const csv = createCsv([
+      row({
+        182: 'META',
+        183: 'Carlos Guerra',
+        184: 'Marina Ávila',
+        185: 'TOTAL',
+      }),
+      row({
+        182: 'REALIZADO',
+        183: 'R$ 24.728,00',
+        184: 'R$ 31.500,00',
+        185: 'R$ 56.228,00',
+      }),
+      row({
+        182: 'Vendas',
+        183: '1',
+        184: '2',
+        185: '3',
+      }),
+    ]);
+
+    const result = parseGoogleSheetRankingCsv(csv);
+
+    expect(result.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'closer',
+          memberId: 'closer-marina-avila',
+          memberName: 'Marina Ávila',
+          revenue: 31500,
+          logos: 2,
+        }),
+      ]),
+    );
+  });
+
+  test('includes a new SDR or BDR from the official pre-sales summary without hardcoded membership', () => {
+    const csv = createCsv([
+      row({
+        200: 'META',
+        201: 'Wilson Junior',
+        202: 'Rafaela Novaes',
+        203: 'Total Time',
+      }),
+      row({
+        200: 'REALIZADO',
+        201: '7',
+        202: '11',
+        203: '18',
+      }),
+    ]);
+
+    const result = parseGoogleSheetRankingCsv(csv, {
+      gid: '1368144463',
+      title: 'CDR JUNHO/26',
+    });
+
+    expect(result.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'sdr',
+          memberId: 'sdr-rafaela-novaes',
+          memberName: 'Rafaela Novaes',
+          meetingsHeld: 11,
+        }),
+      ]),
+    );
+  });
+
+  test('does not keep removed people in detail fallback rankings when they are absent from the sheet month', () => {
+    const csv = createCsv([
+      row({ 0: 'DATA INÍCIO:', 1: '01/05/2026' }),
+      row({ 0: 'DATA FIM:', 1: '31/05/2026' }),
+      row({
+        6: 'DATA DA COMPRA',
+        13: 'VALOR',
+        14: 'STATUS',
+        15: 'MRR',
+        17: 'DATA DE\nFECHAMENTO',
+        27: 'ACONTECIDA',
+        29: 'SDR',
+        30: 'CLOSER',
+        31: 'PRODUTO\nVENDIDO',
+      }),
+      row({
+        6: '20/05/2026',
+        14: 'Fechado',
+        15: 'R$ 23.604,00',
+        17: '21/05/2026',
+        27: '21/05/2026',
+        29: 'Wilson Junior',
+        30: 'Carlos Guerra',
+        31: 'Estruturação Estratégica',
+      }),
+    ]);
+
+    const result = parseGoogleSheetRankingCsv(csv);
+
+    expect(result.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'closer',
+          memberId: 'carlos-guerra',
+          memberName: 'Carlos Guerra',
+          revenue: 23604,
+          logos: 1,
+        }),
+      ]),
+    );
+    expect(result.rows).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          memberId: 'lucas-macedo',
+        }),
+        expect.objectContaining({
+          memberId: 'miguel-de-oliveira-guimaraes-vieira',
+        }),
+      ]),
+    );
   });
 
   test('normalizes the public Google Sheet export into ranking rows', () => {
@@ -156,7 +278,7 @@ describe('parseGoogleSheetRankingCsv', () => {
       expect.objectContaining({
         role: 'closer',
         memberId: 'lucas-macedo',
-        memberName: 'Lucas Macedo',
+        memberName: 'Macedo Lucas Rodrigues',
         revenue: 23604,
         logos: 1,
       }),
@@ -168,13 +290,6 @@ describe('parseGoogleSheetRankingCsv', () => {
         logos: 1,
       }),
       expect.objectContaining({
-        role: 'closer',
-        memberId: 'carlos-guerra',
-        memberName: 'Carlos Guerra',
-        revenue: 0,
-        logos: 0,
-      }),
-      expect.objectContaining({
         role: 'sdr',
         memberId: 'wilson-de-carvalho-junior',
         memberName: 'Wilson Junior',
@@ -183,13 +298,13 @@ describe('parseGoogleSheetRankingCsv', () => {
       expect.objectContaining({
         role: 'sdr',
         memberId: 'lucas-moura',
-        memberName: 'Lucas Moura',
+        memberName: 'Lucas Vieira',
         meetingsHeld: 13,
       }),
       expect.objectContaining({
         role: 'sdr',
         memberId: 'lucas-macedo',
-        memberName: 'Lucas Macedo',
+        memberName: 'Macedo Lucas Rodrigues',
         meetingsHeld: 1,
       }),
     ]);
@@ -326,7 +441,7 @@ describe('parseGoogleSheetRankingCsv', () => {
         expect.objectContaining({
           role: 'closer',
           memberId: 'lucas-macedo',
-          memberName: 'Lucas Macedo',
+          memberName: 'Macedo Lucas Rodrigues',
           revenue: 45906,
           logos: 6,
         }),

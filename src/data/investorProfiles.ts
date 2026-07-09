@@ -4,7 +4,7 @@ export const investorProfiles = [
   {
     id: 'lucas-macedo',
     name: 'Lucas Macedo',
-    aliases: ['Macedo Lucas Rodrigues'],
+    aliases: ['Macedo Lucas Rodrigues', 'Macedo'],
     roleLabel: 'CLOSER',
     status: 'active',
     imagePath: '/investors/13-lucas-macedo.jpg',
@@ -12,6 +12,7 @@ export const investorProfiles = [
   {
     id: 'miguel-de-oliveira-guimaraes-vieira',
     name: 'Miguel de Oliveira Guimarães Vieira',
+    aliases: ['Miguel'],
     roleLabel: 'COORDENADOR',
     status: 'active',
     imagePath: '/investors/23-miguel-de-oliveira-guimaraes-vieira.jpg',
@@ -19,6 +20,7 @@ export const investorProfiles = [
   {
     id: 'carlos-guerra',
     name: 'Carlos Guerra',
+    aliases: ['Carlos'],
     roleLabel: 'CLOSER',
     status: 'active',
     imagePath: '/investors/04-carlos-guerra.jpg',
@@ -26,7 +28,7 @@ export const investorProfiles = [
   {
     id: 'wilson-de-carvalho-junior',
     name: 'Wilson de Carvalho Junior',
-    aliases: ['Wilson Junior'],
+    aliases: ['Wilson Junior', 'Wilson'],
     roleLabel: 'SDR',
     status: 'active',
     imagePath: '/investors/32-wilson-de-carvalho-junior.jpg',

@@ -3,6 +3,8 @@ import {
   parseMetricValue,
   type LocalRankingSourceRow,
 } from './normalization.js';
+import { investorProfiles } from '../data/investorProfiles.js';
+import { findInvestorProfile } from './investors.js';
 import type { PeriodFilter, RawRankingRow } from './ranking.js';
 
 export interface SheetRankingData {
@@ -32,10 +34,9 @@ interface SheetColumnIndexes {
   readonly productSold: number;
 }
 
-interface MemberMapping {
-  readonly id: string;
+interface SheetMember {
+  readonly id?: string;
   readonly name: string;
-  readonly aliases: readonly string[];
 }
 
 export const SOURCE_SPREADSHEET_ID =
@@ -71,58 +72,8 @@ const MONTH_INDEX_BY_KEY = new Map(
   MONTH_NAMES.map((label, index) => [normalizeKey(label), index + 1]),
 );
 
-const KNOWN_CLOSERS: readonly MemberMapping[] = [
-  {
-    id: 'lucas-macedo',
-    name: 'Lucas Macedo',
-    aliases: ['Lucas Macedo', 'Macedo Lucas Rodrigues', 'Macedo'],
-  },
-  {
-    id: 'miguel-de-oliveira-guimaraes-vieira',
-    name: 'Miguel de Oliveira Guimarães Vieira',
-    aliases: ['Miguel', 'Miguel de Oliveira Guimarães Vieira'],
-  },
-  {
-    id: 'carlos-guerra',
-    name: 'Carlos Guerra',
-    aliases: ['Carlos Guerra', 'Carlos'],
-  },
-];
-
-const KNOWN_SDRS: readonly MemberMapping[] = [
-  {
-    id: 'wilson-de-carvalho-junior',
-    name: 'Wilson Junior',
-    aliases: ['Wilson Junior', 'Wilson de Carvalho Junior', 'Wilson'],
-  },
-  {
-    id: 'lucas-moura',
-    name: 'Lucas Moura',
-    aliases: ['Lucas Moura', 'Lucas Vieira', 'lucasvieira@v4company.com'],
-  },
-  {
-    id: 'lucas-macedo',
-    name: 'Lucas Macedo',
-    aliases: ['Lucas Macedo', 'Macedo Lucas Rodrigues', 'Macedo'],
-  },
-  {
-    id: 'gisela-emanuella-candido-costa-silva',
-    name: 'Emanuella',
-    aliases: ['Emanuella', 'Gisela Emanuella Candido Costa Silva'],
-  },
-  {
-    id: 'pedro-paulo-dias-da-fonseca',
-    name: 'Pedro Paulo',
-    aliases: ['Pedro Paulo', 'Pedro Paulo Dias da Fonseca'],
-  },
-  {
-    id: 'matheus-caruzo-monteiro-goncalves',
-    name: 'Matheus Caruzo',
-    aliases: ['Matheus Caruzo', 'Matheus Caruzo Monteiro Gonçalves'],
-  },
-];
-
 const IGNORED_CLOSER_KEYS = new Set(['bruno alfradique', 'bruno']);
+const SUMMARY_STOP_KEYS = new Set(['total', 'total time']);
 
 export function parseGoogleSheetRankingCsv(
   csv: string,
@@ -185,7 +136,7 @@ function createCloserRowsFromCdrSummary(
   table: readonly (readonly string[])[],
   period: PeriodFilter,
 ): readonly LocalRankingSourceRow[] {
-  for (const section of findSummarySections(table, KNOWN_CLOSERS, 2)) {
+  for (const section of findSummarySections(table, 1)) {
     const revenueRow = findSummaryMetricRow(table, section, 'realizado');
     const logosRow = findSummaryMetricRow(table, section, 'vendas');
 
@@ -211,10 +162,11 @@ function createSdrRowsFromCdrSummary(
   table: readonly (readonly string[])[],
   period: PeriodFilter,
 ): readonly LocalRankingSourceRow[] {
-  for (const section of findSummarySections(table, KNOWN_SDRS, 2)) {
+  for (const section of findSummarySections(table, 1)) {
     const meetingsRow = findSummaryMetricRow(table, section, 'realizado');
+    const salesRow = findSummaryMetricRow(table, section, 'vendas');
 
-    if (!meetingsRow) {
+    if (!meetingsRow || salesRow) {
       continue;
     }
 
@@ -242,7 +194,7 @@ function createSdrRowsFromCdrSummary(
 }
 
 function shouldIncludeSdrSummaryMember(
-  member: MemberMapping,
+  member: SheetMember,
   meetingsHeld: number,
   period: PeriodFilter,
 ): boolean {
@@ -260,20 +212,8 @@ function createCloserSourceRows(
 ): readonly LocalRankingSourceRow[] {
   const byCloser = new Map<string, LocalRankingSourceRow>();
 
-  for (const closer of KNOWN_CLOSERS) {
-    byCloser.set(closer.id, {
-      period: period.end,
-      role: 'closer',
-      memberId: closer.id,
-      memberName: closer.name,
-      revenue: 0,
-      logos: 0,
-      sourceChannel: 'Lead Broker',
-    });
-  }
-
   for (const row of rows) {
-    const closer = resolveMember(row[columns.closer], KNOWN_CLOSERS);
+    const closer = createSheetMember(row[columns.closer]);
 
     if (!closer || IGNORED_CLOSER_KEYS.has(normalizeKey(row[columns.closer]))) {
       continue;
@@ -292,11 +232,12 @@ function createCloserSourceRows(
       continue;
     }
 
-    const existing = byCloser.get(closer.id);
+    const closerKey = getMemberMapKey('closer', closer);
+    const existing = byCloser.get(closerKey);
     const revenue = parseMetricValue(row[columns.mrr]) ?? 0;
     const logos = (parseMetricValue(existing?.logos) ?? 0) + 1;
 
-    byCloser.set(closer.id, {
+    byCloser.set(closerKey, {
       period: period.end,
       role: 'closer',
       memberId: closer.id,
@@ -318,12 +259,11 @@ interface SummarySection {
 
 interface SummaryMember {
   readonly column: number;
-  readonly member: MemberMapping;
+  readonly member: SheetMember;
 }
 
 function findSummarySections(
   table: readonly (readonly string[])[],
-  mappings: readonly MemberMapping[],
   minimumMembers: number,
 ): readonly SummarySection[] {
   const sections: SummarySection[] = [];
@@ -334,7 +274,7 @@ function findSummarySections(
         continue;
       }
 
-      const members = collectSummaryMembers(row, columnIndex + 1, mappings);
+      const members = collectSummaryMembers(row, columnIndex + 1);
 
       if (members.length >= minimumMembers) {
         sections.push({
@@ -352,18 +292,17 @@ function findSummarySections(
 function collectSummaryMembers(
   row: readonly string[],
   startColumn: number,
-  mappings: readonly MemberMapping[],
 ): SummarySection['members'] {
   const members: SummaryMember[] = [];
 
   for (let column = startColumn; column < row.length; column += 1) {
     const cell = row[column];
 
-    if (normalizeKey(cell) === 'total' || normalizeKey(cell) === 'total time') {
+    if (SUMMARY_STOP_KEYS.has(normalizeKey(cell))) {
       break;
     }
 
-    const member = resolveMember(cell, mappings);
+    const member = createSheetMember(cell);
 
     if (member) {
       members.push({ column, member });
@@ -393,8 +332,10 @@ function createSdrSourceRows(
   columns: SheetColumnIndexes,
   period: PeriodFilter,
 ): readonly LocalRankingSourceRow[] {
-  return createSdrRowsFromSummary(table, period).length > 0
-    ? createSdrRowsFromSummary(table, period)
+  const summaryRows = createSdrRowsFromSummary(table, period);
+
+  return summaryRows.length > 0
+    ? summaryRows
     : createSdrRowsFromDetails(detailRows, columns, period);
 }
 
@@ -415,7 +356,7 @@ function createSdrRowsFromSummary(
   const rows: LocalRankingSourceRow[] = [];
 
   for (let index = 1; index < values.length; index += 1) {
-    const sdr = resolveMember(names[index], KNOWN_SDRS);
+    const sdr = createSheetMember(names[index]);
     const meetingsHeld = parseMetricValue(values[index]) ?? 0;
 
     if (!sdr || !shouldIncludeSdrSummaryMember(sdr, meetingsHeld, period)) {
@@ -443,7 +384,7 @@ function createSdrRowsFromDetails(
   const bySdr = new Map<string, LocalRankingSourceRow>();
 
   for (const row of rows) {
-    const sdr = resolveMember(row[columns.sdr], KNOWN_SDRS);
+    const sdr = createSheetMember(row[columns.sdr]);
     const happenedAt = parseSheetDate(row[columns.happenedAt]);
 
     if (
@@ -455,9 +396,10 @@ function createSdrRowsFromDetails(
       continue;
     }
 
-    const existing = bySdr.get(sdr.id);
+    const sdrKey = getMemberMapKey('sdr', sdr);
+    const existing = bySdr.get(sdrKey);
 
-    bySdr.set(sdr.id, {
+    bySdr.set(sdrKey, {
       period: period.end,
       role: 'sdr',
       memberId: sdr.id,
@@ -503,6 +445,39 @@ function findColumn(headers: readonly string[], columnName: string): number {
   }
 
   return index;
+}
+
+function createSheetMember(value: string | undefined): SheetMember | undefined {
+  const name = normalizeMemberName(value);
+
+  if (!name || isIgnoredMemberLabel(name)) {
+    return undefined;
+  }
+
+  const profile = findInvestorProfile(investorProfiles, name);
+
+  return {
+    id: profile?.id,
+    name,
+  };
+}
+
+function normalizeMemberName(value: string | undefined): string {
+  return (value ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function isIgnoredMemberLabel(value: string): boolean {
+  const key = normalizeKey(value);
+
+  return (
+    !/[a-z0-9]/.test(key) ||
+    /^xpto(?:\s+\d+)?$/.test(key) ||
+    SUMMARY_STOP_KEYS.has(key)
+  );
+}
+
+function getMemberMapKey(role: 'closer' | 'sdr', member: SheetMember): string {
+  return member.id ?? `${role}:${normalizeKey(member.name)}`;
 }
 
 function detectPeriod(
@@ -585,17 +560,6 @@ function createMonthPeriodFromStart(start: string): PeriodFilter {
   const [yearText, monthText] = start.split('-');
 
   return createMonthPeriod(Number(yearText), Number(monthText));
-}
-
-function resolveMember(
-  value: string | undefined,
-  mappings: readonly MemberMapping[],
-): MemberMapping | undefined {
-  const key = normalizeKey(value);
-
-  return mappings.find((member) =>
-    member.aliases.some((alias) => normalizeKey(alias) === key),
-  );
 }
 
 function parseSheetDate(value: string | undefined): string | null {

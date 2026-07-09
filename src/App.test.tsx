@@ -282,6 +282,32 @@ describe('App', () => {
     ).not.toBeNull();
   });
 
+  test('usa iniciais quando o integrante da planilha não tem imagem local', () => {
+    render(
+      <App
+        initialRows={[
+          {
+            period: '2026-05-31',
+            role: 'sdr',
+            memberId: 'sdr-amanda-lima',
+            memberName: 'Amanda Lima',
+            meetingsHeld: 8,
+            sourceChannel: 'Lead Broker',
+          },
+        ]}
+        initialPeriods={mayAprilPeriods}
+      />,
+    );
+
+    const sdrPanel = screen.getByRole('region', { name: 'SDR / Pré-vendas' });
+    const sdrTable = within(sdrPanel).getByRole('table', {
+      name: 'Lista completa de SDR / Pré-vendas',
+    });
+
+    expect(within(sdrTable).getByText('Amanda Lima')).toBeInTheDocument();
+    expect(within(sdrTable).getByText('AL')).toBeInTheDocument();
+  });
+
   test('renderiza os nomes calculados no ranking de closers e SDRs', () => {
     render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
