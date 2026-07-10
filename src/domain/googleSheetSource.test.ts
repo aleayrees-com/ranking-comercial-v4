@@ -17,6 +17,14 @@ describe('parseGoogleSheetRankingCsv', () => {
         187: 'TOTAL',
       }),
       row({
+        170: '20',
+        171: '25',
+        172: '5',
+        183: 'R$ 100.000',
+        184: 'R$ 120.000',
+        185: 'R$ 80.000',
+      }),
+      row({
         169: 'REALIZADO',
         170: '15',
         171: '19',
@@ -47,6 +55,7 @@ describe('parseGoogleSheetRankingCsv', () => {
         memberName: 'Carlos Guerra',
         revenue: 24728,
         logos: 1,
+        monthlyGoal: 100000,
       }),
       expect.objectContaining({
         role: 'closer',
@@ -67,6 +76,7 @@ describe('parseGoogleSheetRankingCsv', () => {
         memberId: 'lucas-moura',
         memberName: 'Lucas Vieira',
         meetingsHeld: 15,
+        monthlyGoal: 20,
       }),
       expect.objectContaining({
         role: 'sdr',

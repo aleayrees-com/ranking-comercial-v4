@@ -189,55 +189,62 @@ h3 {
   font-weight: 800;
 }
 
-.period-toggle-group {
+.period-select-shell {
+  position: relative;
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-}
-
-.period-toggle {
-  display: grid;
-  grid-template-columns: 16px minmax(0, 1fr);
+  grid-template-columns: 18px minmax(0, 1fr) 18px;
   align-items: center;
   gap: 9px;
   min-height: 42px;
   padding: 0 12px;
   border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 6px;
-  background: #0d0d0d;
-  color: rgba(255, 255, 255, 0.78);
-  cursor: pointer;
-  text-align: left;
-  transition:
-    background 180ms ease,
-    border-color 180ms ease,
-    color 180ms ease,
-    transform 180ms ease;
-}
-
-.period-toggle span {
-  min-width: 0;
-  font-weight: 800;
-}
-
-.period-toggle:hover {
-  border-color: rgba(229, 0, 0, 0.72);
-  background: #210707;
-  color: #ffffff;
-  transform: translateY(-1px);
-}
-
-.period-toggle.is-selected {
-  border-color: var(--accent);
   background: var(--accent);
   color: #ffffff;
   box-shadow: 0 10px 24px rgba(229, 0, 0, 0.24);
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.period-select-shell select {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  appearance: none;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.period-select-shell select option {
+  background: #151515;
+  color: #ffffff;
+}
+
+.period-select-shell:focus-within {
+  outline: 3px solid rgba(229, 0, 0, 0.32);
+  outline-offset: 3px;
+}
+
+.period-select-shell:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: var(--accent-hover);
+  transform: translateY(-1px);
 }
 
 a:focus-visible,
-button:focus-visible {
+button:focus-visible,
+select:focus-visible {
   outline: 3px solid rgba(229, 0, 0, 0.32);
   outline-offset: 3px;
+}
+
+.period-select-shell select:focus-visible {
+  outline: 0;
 }
 
 .summary-section {
@@ -478,7 +485,7 @@ button:focus-visible {
   gap: 8px;
   align-items: end;
   margin: 0 0 20px;
-  padding: 86px 0 0;
+  padding: 116px 0 0;
   overflow-x: auto;
   overflow-y: visible;
   list-style: none;
@@ -495,9 +502,9 @@ button:focus-visible {
     #531d12 44%,
     #1c1716 100%
   );
-  --podium-stage-min: max(calc(var(--podium-height, 156px) + 34px), 244px);
-  --podium-stage-offset: 58px;
-  --podium-stage-padding-top: 58px;
+  --podium-stage-min: clamp(150px, var(--podium-height, 156px), 175px);
+  --podium-stage-offset: 46px;
+  --podium-stage-padding-top: 48px;
   position: relative;
   order: var(--podium-order);
   grid-column: var(--podium-order);
@@ -525,9 +532,9 @@ button:focus-visible {
     #711111 40%,
     #1f1111 100%
   );
-  --podium-stage-min: max(calc(var(--podium-height, 156px) + 44px), 298px);
-  --podium-stage-offset: 78px;
-  --podium-stage-padding-top: 82px;
+  --podium-stage-min: clamp(215px, var(--podium-height, 156px), 230px);
+  --podium-stage-offset: 60px;
+  --podium-stage-padding-top: 70px;
 }
 
 .podium-item[data-position='2'] {
@@ -535,9 +542,9 @@ button:focus-visible {
   --podium-metal: #d9e0ea;
   --podium-metal-dark: #6f7783;
   --podium-metal-soft: rgba(217, 224, 234, 0.24);
-  --podium-stage-min: max(calc(var(--podium-height, 156px) + 72px), 284px);
-  --podium-stage-offset: 66px;
-  --podium-stage-padding-top: 96px;
+  --podium-stage-min: clamp(175px, var(--podium-height, 156px), 195px);
+  --podium-stage-offset: 52px;
+  --podium-stage-padding-top: 58px;
   --podium-stage-bg: linear-gradient(
     180deg,
     #87909b 0%,
@@ -616,9 +623,23 @@ button:focus-visible {
   width: calc(var(--podium-avatar-size) * 1.12);
   height: calc(var(--podium-avatar-size) * 0.78);
   pointer-events: none;
-  transform: translateX(-50%) rotate(-2deg);
+  animation: podium-crown-float 2.4s ease-in-out infinite;
+  transform: translate(-50%, 0) rotate(-2deg);
+  transform-origin: 50% 80%;
+  will-change: transform;
   filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.46))
     drop-shadow(0 0 12px rgba(255, 209, 102, 0.35));
+}
+
+@keyframes podium-crown-float {
+  0%,
+  100% {
+    transform: translate(-50%, 0) rotate(-2deg);
+  }
+
+  50% {
+    transform: translate(-50%, -10px) rotate(2deg);
+  }
 }
 
 .podium-v4-crown img {
@@ -643,7 +664,7 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   width: 100%;
   min-height: var(--podium-stage-min);
   margin-top: var(--podium-stage-offset);
@@ -775,6 +796,10 @@ button:focus-visible {
   gap: 18px;
   margin-bottom: 24px;
   padding-top: 88px;
+}
+
+.ranking-panel.is-expanded .podium-stage {
+  justify-content: center;
 }
 
 .ranking-panel.is-expanded .podium-item {

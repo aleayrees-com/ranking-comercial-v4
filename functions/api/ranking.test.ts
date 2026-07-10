@@ -1,7 +1,12 @@
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { discoverMonthlyCdrSheets, onRequestGet } from './ranking.js';
 
 describe('/api/ranking', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
   test('discovers monthly CDR sheets from public spreadsheet HTML', () => {
     const html = [
       createSheetMetadataFragment('1481288268', 'CDR MAIO/26'),
@@ -123,6 +128,68 @@ describe('/api/ranking', () => {
     expect(
       fetchMock.mock.calls.some((call) =>
         String(call[0]).includes('gid=1481288268'),
+      ),
+    ).toBe(false);
+  });
+
+  test('loads the current month by default even when a future monthly sheet exists', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-10T12:00:00-03:00'));
+
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const value = String(url);
+
+      if (value.includes('/edit?usp=sharing')) {
+        return new Response(
+          [
+            createSheetMetadataFragment('1368144463', 'CDR JUNHO/26'),
+            createSheetMetadataFragment('1369728024', 'CDR JULHO/26'),
+            createSheetMetadataFragment('1783692032', 'CDR AGOSTO/26'),
+          ].join(','),
+          { status: 200 },
+        );
+      }
+
+      if (value.includes('gid=1369728024')) {
+        return new Response(
+          createCsv([
+            row({ 0: 'DATA INÍCIO:', 1: '01/07/2026' }),
+            row({ 0: 'DATA FIM:', 1: '31/07/2026' }),
+            row({ 200: 'META', 201: 'Emanuella' }),
+            row({ 200: '', 201: '14' }),
+            row({ 200: 'REALIZADO', 201: '4' }),
+          ]),
+          { status: 200 },
+        );
+      }
+
+      if (value.includes('gid=1783692032')) {
+        return new Response('agosto não deveria ser carregado', {
+          status: 500,
+        });
+      }
+
+      return new Response('not found', { status: 404 });
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await onRequestGet();
+    const payload = (await response.json()) as {
+      readonly rows: readonly { readonly memberName: string }[];
+      readonly sourceSpreadsheet: { readonly sheet: string };
+    };
+
+    expect(response.status).toBe(200);
+    expect(payload.sourceSpreadsheet.sheet).toBe('CDR JULHO/26');
+    expect(payload.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ memberName: 'Emanuella' }),
+      ]),
+    );
+    expect(
+      fetchMock.mock.calls.some((call) =>
+        String(call[0]).includes('gid=1783692032'),
       ),
     ).toBe(false);
   });

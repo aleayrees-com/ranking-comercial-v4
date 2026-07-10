@@ -7,7 +7,11 @@ import {
   type SheetRankingData,
 } from '../../src/domain/googleSheetSource.js';
 import type { InvestorProfile } from '../../src/domain/investors.js';
-import type { PeriodFilter, RawRankingRow } from '../../src/domain/ranking.js';
+import {
+  getCurrentPeriodMonth,
+  type PeriodFilter,
+  type RawRankingRow,
+} from '../../src/domain/ranking.js';
 
 const GOOGLE_SHEET_EDIT_URL = `https://docs.google.com/spreadsheets/d/${SOURCE_SPREADSHEET_ID}/edit?usp=sharing`;
 const FIRST_AUTOMATED_MONTH = '2026-01-01';
@@ -241,7 +245,14 @@ function selectSheetsToLoad(
   requestedPeriodMonth: string | null,
 ): readonly MonthlyCdrSheet[] {
   if (!requestedPeriodMonth) {
-    return sheets[0] ? [sheets[0]] : [];
+    const currentPeriodMonth = getCurrentPeriodMonth();
+    const currentOrLatestPastSheet = sheets.find(
+      (sheet) => sheet.start.slice(0, 7) <= currentPeriodMonth,
+    );
+
+    return currentOrLatestPastSheet
+      ? [currentOrLatestPastSheet]
+      : sheets.slice(0, 1);
   }
 
   const requestedSheet = sheets.find(

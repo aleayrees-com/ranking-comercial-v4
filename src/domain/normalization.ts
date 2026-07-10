@@ -8,6 +8,7 @@ export interface LocalRankingSourceRow {
   readonly revenue?: string | number | null;
   readonly logos?: string | number | null;
   readonly meetingsHeld?: string | number | null;
+  readonly monthlyGoal?: string | number | null;
   readonly sourceChannel?: string | null;
 }
 
@@ -45,6 +46,9 @@ export function normalizeLocalRows(
     revenue: parseMetricValue(row.revenue),
     logos: parseMetricValue(row.logos),
     meetingsHeld: parseMetricValue(row.meetingsHeld),
+    ...(row.monthlyGoal === null || row.monthlyGoal === undefined
+      ? {}
+      : { monthlyGoal: parseMetricValue(row.monthlyGoal) }),
     sourceChannel: row.sourceChannel?.trim() || 'Não informado',
   }));
 }

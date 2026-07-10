@@ -35,6 +35,16 @@ describe('Toasty layout', () => {
     expect(css).toContain('padding-top: clamp(82px, 13vh, 120px)');
   });
 
+  test('floats the leader crown and lifts podium content away from the base', () => {
+    const css = readFileSync(resolve(repoRoot, 'src/styles.css'), 'utf8');
+    const crownRule = css.match(/\.podium-v4-crown\s*\{[^}]+\}/)?.[0] ?? '';
+    const podiumStageRule = css.match(/\.podium-stage\s*\{[^}]+\}/)?.[0] ?? '';
+
+    expect(crownRule).toContain('animation: podium-crown-float');
+    expect(css).toContain('@keyframes podium-crown-float');
+    expect(podiumStageRule).toContain('justify-content: flex-start');
+  });
+
   test('avoids CSS filters on the Denner image for TV browser compatibility', () => {
     const css = readFileSync(resolve(repoRoot, 'src/styles.css'), 'utf8');
     const imageRule =

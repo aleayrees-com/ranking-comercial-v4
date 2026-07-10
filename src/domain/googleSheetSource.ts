@@ -137,6 +137,7 @@ function createCloserRowsFromCdrSummary(
   period: PeriodFilter,
 ): readonly LocalRankingSourceRow[] {
   for (const section of findSummarySections(table, 1)) {
+    const goalRow = findSummaryGoalRow(table, section);
     const revenueRow = findSummaryMetricRow(table, section, 'realizado');
     const logosRow = findSummaryMetricRow(table, section, 'vendas');
 
@@ -151,6 +152,7 @@ function createCloserRowsFromCdrSummary(
       memberName: member.name,
       revenue: parseMetricValue(revenueRow[column]) ?? 0,
       logos: parseMetricValue(logosRow[column]) ?? 0,
+      monthlyGoal: parseMetricValue(goalRow?.[column]),
       sourceChannel: 'Lead Broker',
     }));
   }
@@ -163,6 +165,7 @@ function createSdrRowsFromCdrSummary(
   period: PeriodFilter,
 ): readonly LocalRankingSourceRow[] {
   for (const section of findSummarySections(table, 1)) {
+    const goalRow = findSummaryGoalRow(table, section);
     const meetingsRow = findSummaryMetricRow(table, section, 'realizado');
     const salesRow = findSummaryMetricRow(table, section, 'vendas');
 
@@ -183,6 +186,7 @@ function createSdrRowsFromCdrSummary(
         memberId: member.id,
         memberName: member.name,
         meetingsHeld,
+        monthlyGoal: parseMetricValue(goalRow?.[column]),
         sourceChannel: 'Lead Broker',
       };
 
@@ -324,6 +328,17 @@ function findSummaryMetricRow(
     .find(
       (row) => normalizeKey(row[section.labelColumn]) === normalizedMetricLabel,
     );
+}
+
+function findSummaryGoalRow(
+  table: readonly (readonly string[])[],
+  section: SummarySection,
+): readonly string[] | undefined {
+  const goalRow = table[section.headerRowIndex + 1];
+
+  return goalRow && normalizeKey(goalRow[section.labelColumn]) === ''
+    ? goalRow
+    : undefined;
 }
 
 function createSdrSourceRows(

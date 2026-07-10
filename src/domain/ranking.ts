@@ -6,6 +6,24 @@ export interface PeriodFilter {
   readonly label: string;
 }
 
+const RANKING_TIME_ZONE = 'America/Sao_Paulo';
+
+export function getCurrentPeriodMonth(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    month: '2-digit',
+    timeZone: RANKING_TIME_ZONE,
+    year: 'numeric',
+  }).formatToParts(now);
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const year = parts.find((part) => part.type === 'year')?.value;
+
+  if (!month || !year) {
+    throw new Error('Não foi possível determinar o mês vigente.');
+  }
+
+  return `${year}-${month}`;
+}
+
 export interface RawRankingRow {
   readonly period: string;
   readonly role: RankingRole;
@@ -14,6 +32,7 @@ export interface RawRankingRow {
   readonly revenue?: number | null;
   readonly logos?: number | null;
   readonly meetingsHeld?: number | null;
+  readonly monthlyGoal?: number | null;
   readonly sourceChannel?: string;
 }
 
@@ -25,6 +44,7 @@ export interface RankingEntry {
   readonly revenue: number;
   readonly logos: number;
   readonly meetingsHeld: number;
+  readonly monthlyGoal: number | null;
   readonly sourceChannel: string;
 }
 
@@ -160,6 +180,7 @@ function aggregateRows(
         revenue: row.revenue ?? 0,
         logos: row.logos ?? 0,
         meetingsHeld: row.meetingsHeld ?? 0,
+        monthlyGoal: row.monthlyGoal ?? null,
         sourceChannel,
       });
       continue;
@@ -170,11 +191,23 @@ function aggregateRows(
       revenue: existing.revenue + (row.revenue ?? 0),
       logos: existing.logos + (row.logos ?? 0),
       meetingsHeld: existing.meetingsHeld + (row.meetingsHeld ?? 0),
+      monthlyGoal: mergeMonthlyGoals(existing.monthlyGoal, row.monthlyGoal),
       sourceChannel: mergeSourceChannels(existing.sourceChannel, sourceChannel),
     });
   }
 
   return Array.from(entriesByMember.values());
+}
+
+function mergeMonthlyGoals(
+  current: number | null,
+  next: number | null | undefined,
+): number | null {
+  if (next === null || next === undefined) {
+    return current;
+  }
+
+  return current === null ? next : Math.max(current, next);
 }
 
 function mergeSourceChannels(current: string, next: string): string {

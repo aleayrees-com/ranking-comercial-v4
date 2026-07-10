@@ -29,6 +29,16 @@ const periods: readonly PeriodFilter[] = [
   },
 ];
 const mayAprilPeriods: readonly PeriodFilter[] = [periods[0], periods[1]];
+const julyPeriod: PeriodFilter = {
+  start: '2026-07-01',
+  end: '2026-07-31',
+  label: 'Julho/2026',
+};
+const augustPeriod: PeriodFilter = {
+  start: '2026-08-01',
+  end: '2026-08-31',
+  label: 'Agosto/2026',
+};
 
 const rows: readonly RawRankingRow[] = [
   {
@@ -99,6 +109,7 @@ const juneRows: readonly RawRankingRow[] = [
     memberId: 'sdr-emanuella',
     memberName: 'Emanuella',
     meetingsHeld: 4,
+    monthlyGoal: 8,
     sourceChannel: 'Lead Broker',
   },
   {
@@ -107,6 +118,7 @@ const juneRows: readonly RawRankingRow[] = [
     memberId: 'sdr-pedro-paulo',
     memberName: 'Pedro Paulo',
     meetingsHeld: 3,
+    monthlyGoal: 6,
     sourceChannel: 'Lead Broker',
   },
   {
@@ -115,6 +127,7 @@ const juneRows: readonly RawRankingRow[] = [
     memberId: 'sdr-matheus-caruzo',
     memberName: 'Matheus Caruzo',
     meetingsHeld: 2,
+    monthlyGoal: 8,
     sourceChannel: 'Lead Broker',
   },
   {
@@ -123,6 +136,7 @@ const juneRows: readonly RawRankingRow[] = [
     memberId: 'sdr-wilson-june',
     memberName: 'Wilson Junior',
     meetingsHeld: 1,
+    monthlyGoal: 0,
     sourceChannel: 'Lead Broker',
   },
   {
@@ -131,6 +145,7 @@ const juneRows: readonly RawRankingRow[] = [
     memberId: 'sdr-lucas-june',
     memberName: 'Lucas Moura',
     meetingsHeld: 1,
+    monthlyGoal: 4,
     sourceChannel: 'Lead Broker',
   },
 ];
@@ -445,6 +460,35 @@ describe('App', () => {
     ).not.toBeInTheDocument();
   });
 
+  test('abre o mês vigente mesmo quando existe uma aba mensal futura', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-10T12:00:00-03:00'));
+
+    render(
+      <App
+        initialRows={[
+          {
+            period: '2026-07-10',
+            role: 'sdr',
+            memberId: 'sdr-emanuella-july',
+            memberName: 'Emanuella Julho',
+            meetingsHeld: 4,
+            sourceChannel: '',
+          },
+        ]}
+        initialPeriods={[augustPeriod, julyPeriod, periods[2]]}
+      />,
+    );
+
+    expect(screen.getByRole('combobox', { name: 'Período' })).toHaveValue(
+      '2026-07',
+    );
+    expect(screen.getAllByText('Emanuella Julho')).not.toHaveLength(0);
+    expect(
+      screen.queryByText('Período sem ranking válido'),
+    ).not.toBeInTheDocument();
+  });
+
   test('abre o mês mais recente derivado das linhas quando a API não envia filtros', () => {
     render(<App initialRows={rowsWithJune} />);
 
@@ -502,7 +546,10 @@ describe('App', () => {
 
     expect(await screen.findAllByText('Emanuella')).not.toHaveLength(0);
 
-    await user.click(screen.getByRole('button', { name: 'Maio/2026' }));
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Período' }),
+      '2026-05',
+    );
 
     await waitFor(() => {
       expect(screen.getAllByText('Macedo Lucas Rodrigues')).not.toHaveLength(0);
@@ -768,11 +815,25 @@ describe('App', () => {
     expect(
       within(sdrTable).getByRole('columnheader', { name: 'Progresso' }),
     ).toBeInTheDocument();
-    expect(
-      within(sdrTable).getByRole('progressbar', {
-        name: 'Progresso de Emanuella',
-      }),
-    ).toHaveAttribute('aria-valuenow', '4');
+    const emanuellaProgress = within(sdrTable).getByRole('progressbar', {
+      name: 'Progresso de Emanuella',
+    });
+
+    expect(emanuellaProgress).toHaveAttribute('aria-valuenow', '4');
+    expect(emanuellaProgress).toHaveAttribute('aria-valuemax', '8');
+    expect(emanuellaProgress.querySelector('span')).toHaveStyle({
+      width: '50%',
+    });
+
+    const wilsonProgress = within(sdrTable).getByRole('progressbar', {
+      name: 'Progresso de Wilson Junior',
+    });
+
+    expect(wilsonProgress).toHaveAttribute(
+      'aria-valuetext',
+      'Meta mensal não definida',
+    );
+    expect(wilsonProgress.querySelector('span')).toHaveStyle({ width: '0%' });
     expect(
       within(sdrTable).queryByRole('columnheader', { name: 'Canal' }),
     ).not.toBeInTheDocument();
@@ -796,9 +857,10 @@ describe('App', () => {
     const user = userEvent.setup();
     render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
 
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Abril/2026' }));
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Período' }),
+      '2026-04',
+    );
 
     expect(screen.getAllByText('Fora do Período')).not.toHaveLength(0);
     expect(
@@ -820,7 +882,10 @@ describe('App', () => {
     const user = userEvent.setup();
     render(<App initialRows={rows} initialPeriods={periods} />);
 
-    await user.click(screen.getByRole('button', { name: 'Junho/2026' }));
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Período' }),
+      '2026-06',
+    );
 
     expect(screen.getByText('Período sem ranking válido')).toBeInTheDocument();
     expect(screen.getByText('Sem closers válidos')).toBeInTheDocument();
@@ -1022,18 +1087,10 @@ describe('App', () => {
 
     await screen.findByText(/Controle de Resultados \| Alfradique & Co RJ/);
 
-    expect(
-      screen.getByRole('button', { name: 'Maio/2026' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: 'Abril/2026' }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: 'Março/2026' }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: 'Junho/2026' }),
-    ).not.toBeInTheDocument();
+    const periodSelect = screen.getByRole('combobox', { name: 'Período' });
+
+    expect(periodSelect).toHaveValue('2026-05');
+    expect(within(periodSelect).getAllByRole('option')).toHaveLength(1);
   });
 
   test('mantém altura visual do pódio por posição', () => {

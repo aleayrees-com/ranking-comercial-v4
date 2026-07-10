@@ -1,6 +1,7 @@
 import {
   AlertTriangle,
   CalendarDays,
+  ChevronDown,
   CircleDollarSign,
   Crown,
   FileWarning,
@@ -29,6 +30,7 @@ import {
 } from './domain/investors.js';
 import {
   buildRanking,
+  getCurrentPeriodMonth,
   type PeriodFilter,
   type RankingEntry,
   type RankingResult,
@@ -706,38 +708,36 @@ export function App({
               <span className="period-label" id="period-control-label">
                 Período
               </span>
-              <div
-                className="period-toggle-group"
-                role="group"
-                aria-labelledby="period-control-label"
-              >
-                {periods.map((period) => {
-                  const periodKey = getPeriodKey(period);
-                  const isSelected = periodKey === getPeriodKey(selectedPeriod);
+              <div className="period-select-shell">
+                <CalendarDays aria-hidden="true" size={18} />
+                <select
+                  aria-labelledby="period-control-label"
+                  onChange={(event) => {
+                    const periodMonth = event.target.value;
+                    const period = periods.find(
+                      (candidate) => getPeriodMonth(candidate) === periodMonth,
+                    );
 
-                  return (
-                    <button
-                      aria-pressed={isSelected}
-                      className={
-                        isSelected
-                          ? 'period-toggle is-selected'
-                          : 'period-toggle'
-                      }
-                      key={periodKey}
-                      onClick={() => {
-                        const periodMonth = getPeriodMonth(period);
+                    if (!period) {
+                      return;
+                    }
 
-                        hasManualPeriodSelectionRef.current = true;
-                        setSelectedPeriodKey(periodKey);
-                        requestLiveRankingPeriod(periodMonth);
-                      }}
-                      type="button"
+                    hasManualPeriodSelectionRef.current = true;
+                    setSelectedPeriodKey(getPeriodKey(period));
+                    requestLiveRankingPeriod(periodMonth);
+                  }}
+                  value={getPeriodMonth(selectedPeriod)}
+                >
+                  {periods.map((period) => (
+                    <option
+                      key={getPeriodKey(period)}
+                      value={getPeriodMonth(period)}
                     >
-                      <CalendarDays aria-hidden="true" size={16} />
-                      <span>{period.label}</span>
-                    </button>
-                  );
-                })}
+                      {period.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown aria-hidden="true" size={18} />
               </div>
             </div>
           ) : null}
@@ -1260,16 +1260,24 @@ function RankingTable({
                       <td>
                         <div
                           aria-label={`Progresso de ${entry.memberName}`}
-                          aria-valuemax={maxMeetingsHeld}
+                          aria-valuemax={getProgressGoal(
+                            entry,
+                            maxMeetingsHeld,
+                          )}
                           aria-valuemin={0}
                           aria-valuenow={entry.meetingsHeld}
+                          aria-valuetext={getProgressValueText(
+                            entry,
+                            maxMeetingsHeld,
+                          )}
                           className="ranking-progress"
                           role="progressbar"
                         >
                           <span
                             style={{
-                              width: `${Math.round(
-                                (entry.meetingsHeld / maxMeetingsHeld) * 100,
+                              width: `${getProgressPercentage(
+                                entry,
+                                maxMeetingsHeld,
                               )}%`,
                             }}
                           />
@@ -1308,6 +1316,44 @@ function getMemberInvestorImage(
       {getInvestorInitials(entry.memberName)}
     </span>
   );
+}
+
+function getProgressGoal(entry: RankingEntry, fallbackGoal: number): number {
+  if (entry.monthlyGoal === null) {
+    return fallbackGoal;
+  }
+
+  return entry.monthlyGoal > 0
+    ? entry.monthlyGoal
+    : Math.max(1, entry.meetingsHeld);
+}
+
+function getProgressPercentage(
+  entry: RankingEntry,
+  fallbackGoal: number,
+): number {
+  if (entry.monthlyGoal === 0) {
+    return 0;
+  }
+
+  const goal = getProgressGoal(entry, fallbackGoal);
+
+  return Math.min(100, Math.round((entry.meetingsHeld / goal) * 100));
+}
+
+function getProgressValueText(
+  entry: RankingEntry,
+  fallbackGoal: number,
+): string {
+  if (entry.monthlyGoal === 0) {
+    return 'Meta mensal não definida';
+  }
+
+  const percentage = getProgressPercentage(entry, fallbackGoal);
+
+  return entry.monthlyGoal === null
+    ? `${percentage}% do maior resultado do período`
+    : `${percentage}% da meta mensal`;
 }
 
 function StateCard({
@@ -1548,6 +1594,7 @@ function isRawRankingRow(value: unknown): value is RawRankingRow {
     isOptionalNumber(value.revenue) &&
     isOptionalNumber(value.logos) &&
     isOptionalNumber(value.meetingsHeld) &&
+    isOptionalNumber(value.monthlyGoal) &&
     (value.sourceChannel === undefined ||
       typeof value.sourceChannel === 'string')
   );
@@ -1693,7 +1740,14 @@ function findPreferredPeriod(
     }
   }
 
-  return periods[0] ?? DEFAULT_PERIODS[0];
+  const currentPeriodMonth = getCurrentPeriodMonth();
+
+  return (
+    periods.find((period) => getPeriodMonth(period) === currentPeriodMonth) ??
+    periods.find((period) => getPeriodMonth(period) < currentPeriodMonth) ??
+    periods[0] ??
+    DEFAULT_PERIODS[0]
+  );
 }
 
 function getPeriodMonth(period: PeriodFilter): string {
