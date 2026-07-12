@@ -690,7 +690,7 @@ export function App({
         src={TOASTY_IMAGE_SRC}
         width="1"
       />
-      <main className="app-shell">
+      <main className="app-shell" data-app="ranking-closer-sdr">
         <section className="dashboard-header" aria-labelledby="dashboard-title">
           <div className="title-block">
             <div className="brand-lockup">

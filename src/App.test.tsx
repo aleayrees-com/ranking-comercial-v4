@@ -248,6 +248,16 @@ describe('App', () => {
     window.history.pushState({}, '', '/');
   });
 
+  test('marca a raiz do app para diagnóstico do bundle publicado', () => {
+    const { container } = render(
+      <App initialRows={rows} initialPeriods={mayAprilPeriods} />,
+    );
+
+    expect(
+      container.querySelector('main[data-app="ranking-closer-sdr"]'),
+    ).not.toBeNull();
+  });
+
   test('referencia fotos apenas dentro dos rankings de closers e SDRs', () => {
     const { container } = render(
       <App
