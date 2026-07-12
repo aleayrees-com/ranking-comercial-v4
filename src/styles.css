@@ -369,6 +369,11 @@ select:focus-visible {
   margin-bottom: 12px;
 }
 
+.podium-card-top
+  > img.investor-image[src='/investors/04-carlos-guerra-v2.png'] {
+  object-position: 50% 35%;
+}
+
 .ranking-grid {
   display: grid;
   grid-template-columns: 1fr;

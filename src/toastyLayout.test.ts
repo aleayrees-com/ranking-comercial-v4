@@ -48,6 +48,16 @@ describe('Toasty layout', () => {
     expect(css).toContain('font-size: 1.42em');
   });
 
+  test('lowers the Carlos Guerra photo inside the podium frame', () => {
+    const css = readFileSync(resolve(repoRoot, 'src/styles.css'), 'utf8');
+    const carlosPhotoRule =
+      css.match(
+        /\.podium-card-top\s*>\s*img\.investor-image\[src='\/investors\/04-carlos-guerra-v2\.png'\]\s*\{[^}]+\}/,
+      )?.[0] ?? '';
+
+    expect(carlosPhotoRule).toContain('object-position: 50% 35%');
+  });
+
   test('floats the leader crown and lifts podium content away from the base', () => {
     const css = readFileSync(resolve(repoRoot, 'src/styles.css'), 'utf8');
     const crownRule = css.match(/\.podium-v4-crown\s*\{[^}]+\}/)?.[0] ?? '';
