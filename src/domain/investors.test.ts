@@ -65,4 +65,16 @@ describe('investors', () => {
       })),
     );
   });
+
+  test('resolve a foto atualizada do Carlos Guerra', () => {
+    expect(
+      findInvestorProfile(investorProfiles, 'Carlos Guerra')?.imagePath,
+    ).toBe('/investors/04-carlos-guerra-v2.png');
+  });
+
+  test('resolve a foto atualizada do Matheus Caruzo', () => {
+    expect(
+      findInvestorProfile(investorProfiles, 'Matheus Caruzo')?.imagePath,
+    ).toBe('/investors/20-matheus-caruzo-v2.png');
+  });
 });

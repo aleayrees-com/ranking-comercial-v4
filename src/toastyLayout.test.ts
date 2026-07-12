@@ -32,7 +32,20 @@ describe('Toasty layout', () => {
     const css = readFileSync(resolve(repoRoot, 'src/styles.css'), 'utf8');
 
     expect(css).toContain('grid-column: var(--podium-order)');
-    expect(css).toContain('padding-top: clamp(82px, 13vh, 120px)');
+    expect(css).toContain('padding-top: clamp(126px, 18vh, 172px)');
+  });
+
+  test('emphasizes the primary podium number over its label', () => {
+    const css = readFileSync(resolve(repoRoot, 'src/styles.css'), 'utf8');
+    const numberRule =
+      css.match(/\.podium-metric-number\s*\{[^}]+\}/)?.[0] ?? '';
+    const labelRule = css.match(/\.podium-metric-label\s*\{[^}]+\}/)?.[0] ?? '';
+
+    expect(numberRule).toContain('font-size: 1.25em');
+    expect(numberRule).toContain('font-weight: 900');
+    expect(labelRule).toContain('font-size: 0.78em');
+    expect(css).toContain('.ranking-panel.is-expanded .podium-metric-number');
+    expect(css).toContain('font-size: 1.42em');
   });
 
   test('floats the leader crown and lifts podium content away from the base', () => {

@@ -425,7 +425,15 @@ describe('App', () => {
     expect(screen.getAllByText('Macedo Lucas Rodrigues')).not.toHaveLength(0);
     expect(screen.getAllByText('Wilson Junior')).not.toHaveLength(0);
     expect(screen.getAllByText('R$ 126.699')).not.toHaveLength(0);
-    expect(screen.getAllByText('29 reuniões')).not.toHaveLength(0);
+    const meetingsMetric = screen.getAllByLabelText('29 reuniões')[0];
+
+    expect(meetingsMetric).toBeInTheDocument();
+    expect(
+      meetingsMetric?.querySelector('.podium-metric-number'),
+    ).toHaveTextContent('29');
+    expect(
+      meetingsMetric?.querySelector('.podium-metric-label'),
+    ).toHaveTextContent('reuniões');
   });
 
   test('abre o mês mais recente retornado pela API em tempo real', async () => {

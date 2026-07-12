@@ -764,6 +764,29 @@ select:focus-visible {
   line-height: 1.1;
 }
 
+.podium-primary-metric {
+  align-items: baseline;
+  justify-content: center;
+  column-gap: 6px;
+  row-gap: 2px;
+  flex-wrap: wrap;
+}
+
+.podium-item strong.podium-primary-metric {
+  display: inline-flex;
+}
+
+.podium-metric-number {
+  font-size: 1.25em;
+  font-weight: 900;
+  line-height: 0.95;
+}
+
+.podium-metric-label {
+  font-size: 0.78em;
+  font-weight: 800;
+}
+
 .podium-lead {
   display: inline-flex;
   align-self: center;
@@ -851,6 +874,10 @@ select:focus-visible {
 
 .ranking-panel.is-expanded .podium-item[data-position='1'] strong {
   font-size: 2.2rem;
+}
+
+.ranking-panel.is-expanded .podium-metric-number {
+  font-size: 1.42em;
 }
 
 .ranking-panel.is-expanded .podium-secondary {
@@ -1498,7 +1525,7 @@ tbody tr:last-child td {
     min-height: 0;
     gap: 12px;
     margin-bottom: 16px;
-    padding-top: clamp(82px, 13vh, 120px);
+    padding-top: clamp(126px, 18vh, 172px);
     overflow: visible;
   }
 

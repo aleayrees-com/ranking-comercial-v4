@@ -110,3 +110,19 @@ final result: passed
 - Horizontal overflow remains `0px`, and the browser console reported no errors or warnings.
 
 final result: passed
+
+## Expanded Podium Clearance And Metric Weight - 2026-07-10
+
+- User reference: `C:/Users/ADMINI~1/AppData/Local/Temp/codex-clipboard-f0592b5a-d433-4f97-98f7-0805fec18215.png`
+- TV screenshot: `C:/Users/Administrator/Documents/SDR/design-qa-expanded-podium-lowered-1280x720.png`
+- Viewport: `1280x720`, expanded SDR podium.
+
+### Evidence
+
+- Expanded landscape ceiling increased to `clamp(126px, 18vh, 172px)`.
+- The animated crown starts `98px` below the viewport top and is fully visible.
+- First-place stage ends at `490px`; the classification table starts at `491px`, with `0px` overlap.
+- The first-place number computes to `42.032px`; its label computes to `23.088px`.
+- Horizontal overflow remains `0px`, and the browser console reported no errors or warnings.
+
+final result: passed

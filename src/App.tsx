@@ -121,6 +121,11 @@ type PodiumItemStyle = CSSProperties & {
   readonly '--podium-order': string;
 };
 
+interface PodiumPrimaryMetric {
+  readonly label?: string;
+  readonly numberText: string;
+}
+
 const DEFAULT_PERIODS: readonly PeriodFilter[] = [
   {
     start: '2026-05-01',
@@ -1056,6 +1061,10 @@ function PodiumItem({
   readonly style: PodiumItemStyle;
 }) {
   const podiumMetal = getPodiumMetal(entry.position);
+  const primaryMetric = getPrimaryMetric(entry, kind);
+  const primaryMetricLabel = primaryMetric.label
+    ? `${primaryMetric.numberText} ${primaryMetric.label}`
+    : primaryMetric.numberText;
 
   return (
     <li
@@ -1102,7 +1111,17 @@ function PodiumItem({
             <span>{entry.position}º</span>
           </span>
           <span className="podium-name">{entry.memberName}</span>
-          <strong>{getPrimaryMetric(entry, kind)}</strong>
+          <strong
+            aria-label={primaryMetricLabel}
+            className="podium-primary-metric"
+          >
+            <span className="podium-metric-number">
+              {primaryMetric.numberText}
+            </span>
+            {primaryMetric.label ? (
+              <span className="podium-metric-label">{primaryMetric.label}</span>
+            ) : null}
+          </strong>
           <span className="podium-secondary">
             {kind === 'closer'
               ? `${formatNumber(entry.logos)} logos`
@@ -1758,12 +1777,20 @@ function getPeriodKey(period: PeriodFilter): string {
   return `${period.start}|${period.end}|${period.label}`;
 }
 
-function getPrimaryMetric(entry: RankingEntry, kind: RankingKind): string {
+function getPrimaryMetric(
+  entry: RankingEntry,
+  kind: RankingKind,
+): PodiumPrimaryMetric {
   if (kind === 'closer') {
-    return formatCurrency(entry.revenue);
+    return {
+      numberText: formatCurrency(entry.revenue),
+    };
   }
 
-  return formatMeetingsLabel(entry.meetingsHeld);
+  return {
+    label: entry.meetingsHeld === 1 ? 'reunião' : 'reuniões',
+    numberText: formatNumber(entry.meetingsHeld),
+  };
 }
 
 function getRankingMetricValue(entry: RankingEntry, kind: RankingKind): number {

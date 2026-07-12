@@ -23,7 +23,7 @@ export const investorProfiles = [
     aliases: ['Carlos'],
     roleLabel: 'CLOSER',
     status: 'active',
-    imagePath: '/investors/04-carlos-guerra.jpg',
+    imagePath: '/investors/04-carlos-guerra-v2.png',
   },
   {
     id: 'wilson-de-carvalho-junior',
@@ -55,7 +55,7 @@ export const investorProfiles = [
     aliases: ['Matheus Caruzo'],
     roleLabel: 'BDR',
     status: 'active',
-    imagePath: '/investors/20-matheus-caruzo-monteiro-goncalves.png',
+    imagePath: '/investors/20-matheus-caruzo-v2.png',
   },
   {
     id: 'leticia-de-oliveira-chebom',
