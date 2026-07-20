@@ -151,6 +151,90 @@ const juneRows: readonly RawRankingRow[] = [
 ];
 const rowsWithJune: readonly RawRankingRow[] = [...rows, ...juneRows];
 
+const julyPodiumRows: readonly RawRankingRow[] = [
+  {
+    period: '2026-07-20',
+    role: 'closer',
+    memberId: 'carlos-guerra',
+    memberName: 'Carlos Guerra',
+    revenue: 57170.4,
+    logos: 4,
+  },
+  {
+    period: '2026-07-20',
+    role: 'closer',
+    memberId: 'bruno-alfradique',
+    memberName: 'Bruno Alfradique',
+    revenue: 0,
+    logos: 0,
+  },
+  {
+    period: '2026-07-20',
+    role: 'closer',
+    memberId: 'lucas-macedo',
+    memberName: 'Macedo Lucas Rodrigues',
+    revenue: 0,
+    logos: 0,
+  },
+  {
+    period: '2026-07-20',
+    role: 'closer',
+    memberId: 'miguel-de-oliveira-guimaraes-vieira',
+    memberName: 'Miguel de Oliveira Guimarães Vieira',
+    revenue: 0,
+    logos: 0,
+  },
+  {
+    period: '2026-07-20',
+    role: 'sdr',
+    memberId: 'gisela-emanuella-candido-costa-silva',
+    memberName: 'Emanuella',
+    meetingsHeld: 7,
+  },
+  {
+    period: '2026-07-20',
+    role: 'sdr',
+    memberId: 'joao-carlos-de-oliveira-costa',
+    memberName: 'João Carlos',
+    meetingsHeld: 6,
+  },
+  {
+    period: '2026-07-20',
+    role: 'sdr',
+    memberId: 'matheus-caruzo-monteiro-goncalves',
+    memberName: 'Matheus Caruzo',
+    meetingsHeld: 6,
+  },
+  {
+    period: '2026-07-20',
+    role: 'sdr',
+    memberId: 'miguel-de-oliveira-guimaraes-vieira',
+    memberName: 'Miguel de Oliveira Guimarães Vieira',
+    meetingsHeld: 4,
+  },
+  {
+    period: '2026-07-20',
+    role: 'sdr',
+    memberId: 'daniel-dias-do-nascimento',
+    memberName: 'Daniel Dias',
+    meetingsHeld: 4,
+  },
+  {
+    period: '2026-07-20',
+    role: 'sdr',
+    memberId: 'lucas-moura',
+    memberName: 'Lucas Vieira',
+    meetingsHeld: 3,
+  },
+  {
+    period: '2026-07-20',
+    role: 'sdr',
+    memberId: 'sdr-paula-oliveira',
+    memberName: 'Paula Oliveira',
+    meetingsHeld: 3,
+  },
+];
+
 function mockAudio(
   playMock = vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
 ) {
@@ -239,10 +323,12 @@ function mockLiveRankingAndToastySignal(
 
 describe('App', () => {
   beforeEach(() => {
+    window.localStorage.clear();
     mockAudio();
   });
 
   afterEach(() => {
+    window.localStorage.clear();
     vi.useRealTimers();
     vi.unstubAllGlobals();
     window.history.pushState({}, '', '/');
@@ -444,6 +530,18 @@ describe('App', () => {
     expect(
       meetingsMetric?.querySelector('.podium-metric-label'),
     ).toHaveTextContent('reuniões');
+  });
+
+  test('não repete logos nem reuniões abaixo da métrica principal do pódio', () => {
+    render(<App initialRows={rows} initialPeriods={mayAprilPeriods} />);
+
+    const closerPodium = screen.getByLabelText('Top 5 Closers');
+    const sdrPodium = screen.getByLabelText('Top 5 SDR / Pré-vendas');
+
+    expect(within(closerPodium).queryByText('7 logos')).not.toBeInTheDocument();
+    expect(
+      within(sdrPodium).queryByText('29 reuniões'),
+    ).not.toBeInTheDocument();
   });
 
   test('abre o mês mais recente retornado pela API em tempo real', async () => {
@@ -1145,6 +1243,92 @@ describe('App', () => {
       '/podium-crown-20260611.png',
     );
     expect(secondPlace.querySelector('.podium-v4-crown')).toBeNull();
+  });
+
+  test('conta desde primeiro de julho para todos os ocupantes atuais do pódio', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-20T12:00:00-03:00'));
+
+    render(<App initialRows={julyPodiumRows} initialPeriods={[julyPeriod]} />);
+
+    const closerPodium = screen.getByLabelText('Top 5 Closers');
+    const sdrPodium = screen.getByLabelText('Top 5 SDR / Pré-vendas');
+
+    expect(
+      within(closerPodium).getByTestId('podium-closer-1'),
+    ).toHaveTextContent('20 dias no 1º lugar');
+    expect(
+      within(closerPodium).getByTestId('podium-closer-2'),
+    ).toHaveTextContent('20 dias no 2º lugar');
+    expect(
+      within(closerPodium).getByTestId('podium-closer-3'),
+    ).toHaveTextContent('20 dias no 3º lugar');
+    expect(
+      within(closerPodium).getByTestId('podium-closer-4'),
+    ).toHaveTextContent('20 dias no 4º lugar');
+    expect(within(sdrPodium).getByTestId('podium-sdr-1')).toHaveTextContent(
+      '20 dias no 1º lugar',
+    );
+    expect(within(sdrPodium).getByTestId('podium-sdr-2')).toHaveTextContent(
+      '20 dias no 2º lugar',
+    );
+    expect(within(sdrPodium).getByTestId('podium-sdr-3')).toHaveTextContent(
+      '20 dias no 3º lugar',
+    );
+    expect(within(sdrPodium).getByTestId('podium-sdr-4')).toHaveTextContent(
+      '20 dias no 4º lugar',
+    );
+    expect(within(sdrPodium).getByTestId('podium-sdr-5')).toHaveTextContent(
+      '20 dias no 5º lugar',
+    );
+  });
+
+  test('reinicia a contagem quando o ocupante muda de posição', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-20T12:00:00-03:00'));
+
+    const firstRender = render(
+      <App initialRows={julyPodiumRows} initialPeriods={[julyPeriod]} />,
+    );
+
+    expect(
+      window.localStorage.getItem('ranking-podium-tenure-v1:2026-07:closer'),
+    ).not.toBeNull();
+
+    firstRender.unmount();
+    vi.setSystemTime(new Date('2026-07-21T12:00:00-03:00'));
+
+    const rowsAfterPositionChange = julyPodiumRows.map((row) => {
+      if (row.memberId === 'bruno-alfradique') {
+        return { ...row, revenue: 60000, logos: 5 };
+      }
+
+      return row;
+    });
+
+    render(
+      <App
+        initialRows={rowsAfterPositionChange}
+        initialPeriods={[julyPeriod]}
+      />,
+    );
+
+    const closerPodium = screen.getByLabelText('Top 5 Closers');
+
+    const firstPlace = within(closerPodium).getByTestId('podium-closer-1');
+    const secondPlace = within(closerPodium).getByTestId('podium-closer-2');
+
+    expect(firstPlace).toHaveTextContent('Bruno Alfradique');
+    expect(
+      within(firstPlace).getByText('1 dia no 1º lugar'),
+    ).toBeInTheDocument();
+    expect(secondPlace).toHaveTextContent('Carlos Guerra');
+    expect(
+      within(secondPlace).getByText('1 dia no 2º lugar'),
+    ).toBeInTheDocument();
+    expect(
+      within(closerPodium).getByTestId('podium-closer-3'),
+    ).toHaveTextContent('21 dias no 3º lugar');
   });
 
   test('exibe Denner Toasty automaticamente a cada cinco minutos', async () => {

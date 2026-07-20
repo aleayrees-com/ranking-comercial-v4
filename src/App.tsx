@@ -36,6 +36,13 @@ import {
   type RankingResult,
   type RawRankingRow,
 } from './domain/ranking.js';
+import {
+  formatPodiumTenure,
+  getPodiumTenureStorageKey,
+  getPodiumToday,
+  parsePodiumTenureRecords,
+  reconcilePodiumTenures,
+} from './domain/podiumTenure.js';
 
 interface AppProps {
   readonly initialInvestors?: readonly InvestorProfile[];
@@ -791,6 +798,7 @@ export function App({
                 kind="closer"
                 onClose={() => setExpandedPanelKind(null)}
                 onExpand={() => setExpandedPanelKind('closer')}
+                periodMonth={getPeriodMonth(ranking.period)}
                 title="Closers"
               />
               <RankingPanel
@@ -801,6 +809,7 @@ export function App({
                 kind="sdr"
                 onClose={() => setExpandedPanelKind(null)}
                 onExpand={() => setExpandedPanelKind('sdr')}
+                periodMonth={getPeriodMonth(ranking.period)}
                 title="SDR / Pré-vendas"
               />
             </div>
@@ -931,6 +940,7 @@ function RankingPanel({
   kind,
   onClose,
   onExpand,
+  periodMonth,
   title,
 }: {
   readonly emptyLabel: string;
@@ -940,9 +950,15 @@ function RankingPanel({
   readonly kind: RankingKind;
   readonly onClose: () => void;
   readonly onExpand: () => void;
+  readonly periodMonth: string;
   readonly title: string;
 }) {
   const topEntries = getPodiumEntries(entries, kind);
+  const tenureTextByPosition = usePodiumTenureText(
+    topEntries,
+    kind,
+    periodMonth,
+  );
   const firstMemberId = topEntries[0]?.memberId ?? null;
   const topEntryIds = topEntries.map((entry) => entry.memberId).join('|');
   const [activeMemberId, setActiveMemberId] = useState<string | null>(
@@ -1023,6 +1039,7 @@ function RankingPanel({
               leadText={getPodiumLeadText(entry, topEntries, kind)}
               onActivate={() => setActiveMemberId(entry.memberId)}
               style={getPodiumItemStyle(entry, kind, maxMetricValue)}
+              tenureText={tenureTextByPosition.get(entry.position)}
             />
           ))}
         </ol>
@@ -1051,6 +1068,7 @@ function PodiumItem({
   leadText,
   onActivate,
   style,
+  tenureText,
 }: {
   readonly active: boolean;
   readonly entry: RankingEntry;
@@ -1059,6 +1077,7 @@ function PodiumItem({
   readonly leadText?: string;
   readonly onActivate: () => void;
   readonly style: PodiumItemStyle;
+  readonly tenureText?: string;
 }) {
   const podiumMetal = getPodiumMetal(entry.position);
   const primaryMetric = getPrimaryMetric(entry, kind);
@@ -1110,28 +1129,90 @@ function PodiumItem({
             )}
             <span>{entry.position}º</span>
           </span>
-          <span className="podium-name">{entry.memberName}</span>
-          <strong
-            aria-label={primaryMetricLabel}
-            className="podium-primary-metric"
-          >
-            <span className="podium-metric-number">
-              {primaryMetric.numberText}
-            </span>
-            {primaryMetric.label ? (
-              <span className="podium-metric-label">{primaryMetric.label}</span>
+          <span className="podium-content">
+            <span className="podium-name">{entry.memberName}</span>
+            <strong
+              aria-label={primaryMetricLabel}
+              className="podium-primary-metric"
+            >
+              <span className="podium-metric-number">
+                {primaryMetric.numberText}
+              </span>
+              {primaryMetric.label ? (
+                <span className="podium-metric-label">
+                  {primaryMetric.label}
+                </span>
+              ) : null}
+            </strong>
+            {tenureText ? (
+              <span className="podium-tenure">{tenureText}</span>
             ) : null}
-          </strong>
-          <span className="podium-secondary">
-            {kind === 'closer'
-              ? `${formatNumber(entry.logos)} logos`
-              : formatMeetingsLabel(entry.meetingsHeld)}
+            {leadText ? <span className="podium-lead">{leadText}</span> : null}
           </span>
-          {leadText ? <span className="podium-lead">{leadText}</span> : null}
         </span>
       </button>
     </li>
   );
+}
+
+function usePodiumTenureText(
+  entries: readonly RankingEntry[],
+  kind: RankingKind,
+  periodMonth: string,
+): ReadonlyMap<number, string> {
+  const [today, setToday] = useState(() => getPodiumToday());
+  const storageKey = getPodiumTenureStorageKey(periodMonth, kind);
+  const isCurrentPeriod = periodMonth === today.slice(0, 7);
+  const records = useMemo(() => {
+    if (!isCurrentPeriod) {
+      return [];
+    }
+
+    return reconcilePodiumTenures(
+      entries.map(({ memberId, position }) => ({ memberId, position })),
+      parsePodiumTenureRecords(readLocalStorage(storageKey)),
+      periodMonth,
+      kind,
+      today,
+    );
+  }, [entries, isCurrentPeriod, kind, periodMonth, storageKey, today]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setToday(getPodiumToday());
+    }, 60_000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    if (isCurrentPeriod && records.length > 0) {
+      writeLocalStorage(storageKey, JSON.stringify(records));
+    }
+  }, [isCurrentPeriod, records, storageKey]);
+
+  return new Map(
+    records.map((record) => [
+      record.position,
+      formatPodiumTenure(record, today),
+    ]),
+  );
+}
+
+function readLocalStorage(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalStorage(key: string, value: string): void {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // The ranking keeps working without tenure persistence when storage is blocked.
+  }
 }
 
 function DennerToasty({

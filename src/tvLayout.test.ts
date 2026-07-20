@@ -46,7 +46,7 @@ describe('TV layout', () => {
       /\.podium-stage \{[\s\S]*?justify-content: flex-start;[\s\S]*?\}/,
     );
     expect(css).toMatch(
-      /\.ranking-panel\.is-expanded \.podium-stage \{[\s\S]*?justify-content: center;[\s\S]*?\}/,
+      /\.ranking-panel\.is-expanded \.podium-stage \{[\s\S]*?justify-content: flex-start;[\s\S]*?\}/,
     );
     expect(css).toContain(
       ".ranking-panel.is-expanded .podium-item[data-position='1']",

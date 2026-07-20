@@ -28,11 +28,20 @@ describe('Toasty layout', () => {
     expect(shortTvRule).toContain('bottom: clamp(12px, 4dvh, 36px)');
   });
 
-  test('keeps the expanded podium centered without overlapping the table on short TVs', () => {
+  test('keeps the expanded podium top-down without overlapping the table on short TVs', () => {
     const css = readFileSync(resolve(repoRoot, 'src/styles.css'), 'utf8');
+    const landscapeRule =
+      css.match(/@media \(orientation: landscape\)[\s\S]+?(?=@media|$)/)?.[0] ??
+      '';
 
     expect(css).toContain('grid-column: var(--podium-order)');
     expect(css).toContain('padding-top: clamp(126px, 18vh, 172px)');
+    expect(landscapeRule).toContain(
+      ".ranking-panel.is-expanded .podium-item[data-position='3']",
+    );
+    expect(landscapeRule).toContain(
+      '--podium-stage-padding-top: calc(var(--podium-avatar-size) * 0.68)',
+    );
   });
 
   test('emphasizes the primary podium number over its label', () => {
@@ -66,6 +75,20 @@ describe('Toasty layout', () => {
     expect(crownRule).toContain('animation: podium-crown-float');
     expect(css).toContain('@keyframes podium-crown-float');
     expect(podiumStageRule).toContain('justify-content: flex-start');
+  });
+
+  test('lifts the podium metrics and keeps the tenure message compact', () => {
+    const css = readFileSync(resolve(repoRoot, 'src/styles.css'), 'utf8');
+    const contentRule = css.match(/\.podium-content\s*\{[^}]+\}/)?.[0] ?? '';
+    const metricRule = css.match(/\.podium-item strong\s*\{[^}]+\}/)?.[0] ?? '';
+    const tenureRule = css.match(/\.podium-tenure\s*\{[^}]+\}/)?.[0] ?? '';
+
+    expect(css).toContain('--podium-stage-padding-top: 32px');
+    expect(css).toContain('--podium-stage-padding-top: 44px');
+    expect(contentRule).toContain('flex-direction: column');
+    expect(contentRule).toContain('justify-content: flex-start');
+    expect(metricRule).toContain('margin: 2px 0 4px');
+    expect(tenureRule).toContain('font-size: 0.62rem');
   });
 
   test('avoids CSS filters on the Denner image for TV browser compatibility', () => {
