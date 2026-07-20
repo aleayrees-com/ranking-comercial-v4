@@ -77,4 +77,10 @@ describe('investors', () => {
       findInvestorProfile(investorProfiles, 'Matheus Caruzo')?.imagePath,
     ).toBe('/investors/20-matheus-caruzo-v2.png');
   });
+
+  test('resolve a foto atualizada da Paula pelo nome usado na planilha', () => {
+    expect(
+      findInvestorProfile(investorProfiles, 'Paula Oliveira')?.imagePath,
+    ).toBe('/investors/39-paula-cristina-jesus-nunes-de-oliveira.png');
+  });
 });

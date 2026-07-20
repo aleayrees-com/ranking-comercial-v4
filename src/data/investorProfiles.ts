@@ -105,7 +105,7 @@ export const investorProfiles = [
   {
     id: 'paula-cristina-jesus-nunes-de-oliveira',
     name: 'Paula Cristina Jesus Nunes de Oliveira',
-    aliases: ['Paula Cristina'],
+    aliases: ['Paula Cristina', 'Paula Oliveira'],
     roleLabel: 'BDR',
     status: 'active',
     imagePath: '/investors/39-paula-cristina-jesus-nunes-de-oliveira.png',
